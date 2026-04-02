@@ -1,0 +1,83 @@
+import { NestFactory } from '@nestjs/core';
+import { ValidationPipe, Logger } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import * as os from 'os';
+import { AppModule } from './app.module';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+
+function getLanIP(): string {
+  for (const ifaces of Object.values(os.networkInterfaces())) {
+    for (const iface of ifaces ?? []) {
+      if (iface.family === 'IPv4' && !iface.internal) return iface.address;
+    }
+  }
+  return 'localhost';
+}
+
+async function bootstrap() {
+  const logger = new Logger('Bootstrap');
+  const app = await NestFactory.create(AppModule);
+
+  // Global prefix
+  app.setGlobalPrefix('api/v1');
+
+  // Global validation pipe
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+    }),
+  );
+
+  // Global exception filter
+  app.useGlobalFilters(new HttpExceptionFilter());
+
+  // Global logging interceptor
+  app.useGlobalInterceptors(new LoggingInterceptor());
+
+  // CORS
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN || '*',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
+  // Swagger documentation
+  const config = new DocumentBuilder()
+    .setTitle('HR Management System API')
+    .setDescription('Production-ready HR Management System REST API')
+    .setVersion('1.0')
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+      'JWT-auth',
+    )
+    .addTag('Auth', 'Authentication endpoints')
+    .addTag('Employees', 'Employee management')
+    .addTag('Organization', 'Branch, Department & Position management')
+    .addTag('Contracts', 'Employee contracts')
+    .addTag('Leave', 'Leave requests & approvals')
+    .addTag('Attendance', 'Attendance tracking')
+    .addTag('Workflow', 'Approval workflows')
+    .addTag('Offboarding', 'Resignation & offboarding')
+    .addTag('Rewards', 'Decisions, rewards & penalties')
+    .addTag('Audit', 'Audit logs')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document, {
+    swaggerOptions: { persistAuthorization: true },
+  });
+
+  const port = parseInt(process.env.PORT ?? '3001', 10);
+  const lanIP = getLanIP();
+  await app.listen(port, '0.0.0.0');
+
+  logger.log(`🚀 Local:   http://localhost:${port}/api/v1`);
+  logger.log(`🌐 Network: http://${lanIP}:${port}/api/v1`);
+  logger.log(`📚 Swagger: http://localhost:${port}/api/docs`);
+}
+
+bootstrap();

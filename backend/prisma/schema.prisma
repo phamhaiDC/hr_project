@@ -1,0 +1,418 @@
+// Prisma schema aligned to the existing PostgreSQL database structure.
+// Column names use @map() to bridge snake_case DB ↔ camelCase TypeScript.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// Organization
+// ─────────────────────────────────────────────
+
+model Branch {
+  id          Int          @id @default(autoincrement())
+  name        String
+  departments Department[]
+  employees   Employee[]
+
+  @@map("branch")
+}
+
+model Department {
+  id        Int        @id @default(autoincrement())
+  name      String?
+  branchId  Int?       @map("branch_id")
+  branch    Branch?    @relation(fields: [branchId], references: [id])
+  employees Employee[]
+
+  @@map("department")
+}
+
+model Position {
+  id        Int        @id @default(autoincrement())
+  name      String?
+  employees Employee[]
+
+  @@map("position")
+}
+
+// ─────────────────────────────────────────────
+// Employee
+// ─────────────────────────────────────────────
+
+model Employee {
+  id               Int       @id @default(autoincrement())
+  code             String?
+  fullName         String?   @map("full_name")
+  email            String?   @unique
+  phone            String?
+  branchId         Int?      @map("branch_id")
+  departmentId     Int?      @map("department_id")
+  positionId       Int?      @map("position_id")
+  managerId        Int?      @map("manager_id")
+  status           String?   // probation | official | resigned
+  joinDate         DateTime? @map("join_date") @db.Date
+  probationEndDate DateTime? @map("probation_end_date") @db.Date
+  // ── added via migration ──
+  password         String?
+  role             String?   @default("employee") // admin | hr | manager | employee
+  // ─────────────────────────
+  createdAt        DateTime? @default(now()) @map("created_at")
+  updatedAt        DateTime? @updatedAt @map("updated_at")
+
+  branch           Branch?     @relation(fields: [branchId], references: [id])
+  department       Department? @relation(fields: [departmentId], references: [id])
+  position         Position?   @relation(fields: [positionId], references: [id])
+  manager          Employee?   @relation("ManagerEmployee", fields: [managerId], references: [id])
+  subordinates     Employee[]  @relation("ManagerEmployee")
+
+  leaveRequests        LeaveRequest[]
+  approvedLeaves       LeaveApproval[]      @relation("LeaveApprover")
+  attendances          Attendance[]
+  attendanceLogs       AttendanceLog[]
+  resignationRequests  ResignationRequest[]
+  offboardingChecklists OffboardingChecklist[]
+  employeeHistories    EmployeeHistory[]    @relation("EmployeeHistoryEmployee")
+  auditLogs            AuditLog[]
+  leaveBalance         LeaveBalance?
+  leaveAccrualLogs     LeaveAccrualLog[]
+
+  @@map("employee")
+}
+
+// ─────────────────────────────────────────────
+// Contract
+// ─────────────────────────────────────────────
+
+model Contract {
+  id         Int       @id @default(autoincrement())
+  employeeId Int?      @map("employee_id")
+  type       String?
+  startDate  DateTime? @map("start_date") @db.Date
+  endDate    DateTime? @map("end_date") @db.Date
+  status     String?
+  createdAt  DateTime? @default(now()) @map("created_at")
+
+  @@map("contract")
+}
+
+// ─────────────────────────────────────────────
+// Leave
+// ─────────────────────────────────────────────
+
+model LeaveRequest {
+  id          Int       @id @default(autoincrement())
+  employeeId  Int?      @map("employee_id")
+  employee    Employee? @relation(fields: [employeeId], references: [id])
+  fromDate    DateTime? @map("from_date") @db.Date
+  toDate      DateTime? @map("to_date") @db.Date
+  type        String?   // annual | sick | unpaid
+  status      String?   @default("pending") // pending | approved | rejected | cancelled
+  currentStep Int?      @default(1) @map("current_step")
+  // ── added via migration ──
+  reason      String?
+  days        Int?
+  // ─────────────────────────
+  createdAt   DateTime? @default(now()) @map("created_at")
+
+  approvals   LeaveApproval[]
+
+  @@map("leave_request")
+}
+
+model LeaveApproval {
+  id           Int       @id @default(autoincrement())
+  requestId    Int?      @map("request_id")
+  request      LeaveRequest? @relation(fields: [requestId], references: [id])
+  step         Int?
+  approverId   Int?      @map("approver_id")
+  approver     Employee? @relation("LeaveApprover", fields: [approverId], references: [id])
+  // ── added via migration ──
+  approverRole String?   @map("approver_role") // manager | hr
+  comments     String?
+  // ─────────────────────────
+  status       String?   @default("pending") // pending | approved | rejected
+  actionTime   DateTime? @map("action_time")
+
+  @@unique([requestId, step])
+  @@map("leave_approval")
+}
+
+model LeaveBalance {
+  employeeId Int      @id @map("employee_id")
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  total      Decimal  @default(0) @db.Decimal(10, 1)
+  used       Decimal  @default(0) @db.Decimal(10, 1)
+  remaining  Decimal  @default(0) @db.Decimal(10, 1)
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("leave_balance")
+}
+
+model LeaveAccrualLog {
+  id          Int      @id @default(autoincrement())
+  employeeId  Int      @map("employee_id")
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  days        Decimal  @db.Decimal(10, 1)
+  note        String?
+  accrualDate DateTime @map("accrual_date") @db.Date
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("leave_accrual_log")
+}
+
+// ─────────────────────────────────────────────
+// Calendar & Holiday
+// ─────────────────────────────────────────────
+
+model CalendarYear {
+  id          Int           @id @default(autoincrement())
+  year        Int           @unique
+  weekendDays Int[]         @map("weekend_days")  // JS day numbers: 0=Sun … 6=Sat
+  country     String?
+  description String?
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt     @map("updated_at")
+
+  days        CalendarDay[]
+
+  @@map("calendar_year")
+}
+
+model CalendarDay {
+  id     Int      @id @default(autoincrement())
+  year   Int
+  date   DateTime @unique @db.Date
+  type   String   // WORKING | WEEKEND | HOLIDAY | COMPENSATION
+  isPaid Boolean  @default(true) @map("is_paid")
+  note   String?
+
+  calendarYear CalendarYear @relation(fields: [year], references: [year])
+
+  @@map("calendar_day")
+}
+
+model Holiday {
+  id          Int      @id @default(autoincrement())
+  name        String
+  fromDate    DateTime @map("from_date") @db.Date
+  toDate      DateTime @map("to_date")  @db.Date
+  isPaid      Boolean  @default(true)  @map("is_paid")
+  isRecurring Boolean  @default(false) @map("is_recurring") // apply every year (same month/day)
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt     @map("updated_at")
+
+  @@map("holiday")
+}
+
+// ─────────────────────────────────────────────
+// WFM – Shift & Location
+// ─────────────────────────────────────────────
+
+model Shift {
+  id                  Int          @id @default(autoincrement())
+  name                String
+  startTime           String       @map("start_time")          // "HH:MM"
+  endTime             String       @map("end_time")            // "HH:MM"
+  breakMinutes        Int          @default(60)  @map("break_minutes")
+  graceLateMinutes    Int          @default(15)  @map("grace_late_minutes")
+  graceEarlyMinutes   Int          @default(15)  @map("grace_early_minutes")
+  isDefault           Boolean      @default(false) @map("is_default")
+  createdAt           DateTime     @default(now()) @map("created_at")
+
+  attendances         Attendance[]
+
+  @@map("shift")
+}
+
+model WorkLocation {
+  id        Int             @id @default(autoincrement())
+  name      String
+  lat       Float
+  lng       Float
+  radius    Int             // metres – geofence radius
+  address   String?
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  attendanceLogs AttendanceLog[]
+
+  @@map("work_location")
+}
+
+model AttendanceLog {
+  id           Int           @id @default(autoincrement())
+  employeeId   Int           @map("employee_id")
+  time         DateTime
+  type         String        // check_in | check_out
+  lat          Float?
+  lng          Float?
+  locationId   Int?          @map("location_id")
+  deviceId     String?       @map("device_id")
+  distanceM    Float?        @map("distance_m")    // metres from work location
+  attendanceId Int?          @map("attendance_id") // linked Attendance row
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  employee     Employee      @relation(fields: [employeeId], references: [id])
+  location     WorkLocation? @relation(fields: [locationId], references: [id])
+
+  @@map("attendance_log")
+}
+
+// ─────────────────────────────────────────────
+// Attendance
+// ─────────────────────────────────────────────
+
+model Attendance {
+  id           Int       @id @default(autoincrement())
+  employeeId   Int?      @map("employee_id")
+  employee     Employee? @relation(fields: [employeeId], references: [id])
+  date         DateTime? @db.Date
+  checkinTime  DateTime? @map("checkin_time")
+  checkoutTime DateTime? @map("checkout_time")
+  workingHours Decimal?  @map("working_hours") @db.Decimal(5, 2)
+  // ── WFM fields ──────────────────────────────
+  shiftId       Int?     @map("shift_id")
+  shift         Shift?   @relation(fields: [shiftId], references: [id])
+  isLate        Boolean  @default(false) @map("is_late")
+  isEarlyOut    Boolean  @default(false) @map("is_early_out")
+  isOvertime    Boolean  @default(false) @map("is_overtime")
+  overtimeHours Decimal? @map("overtime_hours") @db.Decimal(5, 2)
+  checkinLat      Float?   @map("checkin_lat")
+  checkinLng      Float?   @map("checkin_lng")
+  checkoutLat     Float?   @map("checkout_lat")
+  checkoutLng     Float?   @map("checkout_lng")
+  // ── Leave integration ────────────────────────
+  isOnLeave       Boolean  @default(false) @map("is_on_leave")
+  leaveRequestId  Int?     @map("leave_request_id")
+  // ─────────────────────────────────────────────
+  @@unique([employeeId, date])
+  @@map("attendance")
+}
+
+model AttendanceRaw {
+  id           Int       @id @default(autoincrement())
+  employeeCode String?   @map("employee_code")
+  timestamp    DateTime?
+
+  @@map("attendance_raw")
+}
+
+// ─────────────────────────────────────────────
+// Workflow
+// ─────────────────────────────────────────────
+
+model ApprovalFlow {
+  id    Int    @id @default(autoincrement())
+  type  String?
+  steps ApprovalStep[]
+
+  @@map("approval_flow")
+}
+
+model ApprovalStep {
+  id           Int          @id @default(autoincrement())
+  flowId       Int?         @map("flow_id")
+  flow         ApprovalFlow? @relation(fields: [flowId], references: [id])
+  stepOrder    Int?          @map("step_order")
+  approverType String?       @map("approver_type") // manager | hr | admin
+
+  @@map("approval_step")
+}
+
+// ─────────────────────────────────────────────
+// Offboarding
+// ─────────────────────────────────────────────
+
+model ResignationRequest {
+  id              Int       @id @default(autoincrement())
+  employeeId      Int?      @map("employee_id")
+  employee        Employee? @relation(fields: [employeeId], references: [id])
+  lastWorkingDate DateTime? @map("last_working_date") @db.Date
+  reason          String?
+  status          String?   @default("pending") // pending | approved | rejected | completed
+  currentStep     Int?      @default(1) @map("current_step")
+  createdAt       DateTime? @default(now()) @map("created_at")
+  updatedAt       DateTime? @updatedAt @map("updated_at")
+
+  approvals       ResignationApproval[]
+
+  @@map("resignation_request")
+}
+
+model ResignationApproval {
+  id           Int                 @id @default(autoincrement())
+  requestId    Int?                @map("request_id")
+  request      ResignationRequest? @relation(fields: [requestId], references: [id])
+  step         Int?
+  approverId   Int?                @map("approver_id")
+  approverRole String?             @map("approver_role") // manager | hr
+  status       String?             @default("pending")  // pending | approved | rejected
+  comments     String?
+  actionTime   DateTime?           @map("action_time")
+
+  @@unique([requestId, step])
+  @@map("resignation_approval")
+}
+
+model OffboardingChecklist {
+  id         Int       @id @default(autoincrement())
+  employeeId Int?      @map("employee_id")
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+  item       String?
+  status     String?   @default("pending") // pending | completed
+  createdAt  DateTime? @default(now()) @map("created_at")
+
+  @@map("offboarding_checklist")
+}
+
+// ─────────────────────────────────────────────
+// Decision / History
+// ─────────────────────────────────────────────
+
+model Decision {
+  id         Int       @id @default(autoincrement())
+  employeeId Int?      @map("employee_id")
+  type       String?
+  reason     String?
+  amount     Decimal?
+  date       DateTime? @db.Date
+
+  @@map("decision")
+}
+
+model EmployeeHistory {
+  id            Int       @id @default(autoincrement())
+  employeeId    Int?      @map("employee_id")
+  employee      Employee? @relation("EmployeeHistoryEmployee", fields: [employeeId], references: [id])
+  field         String?   // department | position | manager | status | role
+  oldValue      String?   @map("old_value")
+  newValue      String?   @map("new_value")
+  changedBy     Int?      @map("changed_by")
+  effectiveDate DateTime? @default(now()) @map("effective_date") @db.Date
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@map("employee_history")
+}
+
+// ─────────────────────────────────────────────
+// Audit
+// ─────────────────────────────────────────────
+
+model AuditLog {
+  id        Int       @id @default(autoincrement())
+  userId    Int?      @map("user_id")
+  actor     Employee? @relation(fields: [userId], references: [id])
+  action    String?
+  entity    String?
+  entityId  Int?      @map("entity_id")
+  details   Json?     @map("details")
+  timestamp DateTime  @default(now())
+
+  @@map("audit_log")
+}

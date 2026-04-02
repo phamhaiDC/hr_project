@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx prisma:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(1:*)",
+      "Bash(PGPASSWORD='Dcorp$8tqk' psql -h 192.168.2.41 -U postgres -d dcorphr -c \"\\\\dt public.*\" 2>&1)",
+      "Bash(node:*)",
+      "Bash(cat /Volumes/Working_Space/AI_DEV_Projects/hrprojectv1/src/organization/dto/*.ts)",
+      "Bash(cat /Volumes/Working_Space/AI_DEV_Projects/hrprojectv1/src/contract/dto/*.ts)",
+      "Bash(cat /Volumes/Working_Space/AI_DEV_Projects/hrprojectv1/src/workflow/dto/*.ts)",
+      "Bash(cat /Volumes/Working_Space/AI_DEV_Projects/hrprojectv1/src/offboarding/dto/*.ts)",
+      "Bash(cat /Volumes/Working_Space/AI_DEV_Projects/hrprojectv1/src/reward/dto/*.ts)",
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(curl -s -X POST http://localhost:3000/api/v1/auth/login -H 'Content-Type: application/json' -d '{\"\"\"\"email\"\"\"\":\"\"\"\"employee@company.com\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"password123\"\"\"\"}')",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(curl:*)",
+      "Bash(pkill -f 'nest start')",
+      "Bash(pkill -f ts-node)",
+      "Bash(lsof -ti:3000)",
+      "Bash(xargs kill:*)",
+      "Bash(npx create-next-app@latest hr-frontend --typescript --tailwind --eslint --app --src-dir --no-import-alias --use-npm)",
+      "Bash(npx create-next-app@latest hr-frontend --typescript --tailwind --eslint --app --src-dir --no-import-alias --use-npm --no-turbopack --yes)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(npx --prefix /Volumes/Working_Space/AI_DEV_Projects/hr-frontend tsc --noEmit)",
+      "Bash(lsof -iTCP -sTCP:LISTEN -nP)",
+      "Bash(PGPASSWORD='Dcorp$8tqk' psql -h 192.168.2.41 -U postgres -d dcorphr -c \"\\\\dt\")",
+      "Bash(lsof -ti:3001)",
+      "Bash(python3 -m json.tool)",
+      "Bash(find /Volumes/Working_Space/AI_DEV_Projects/hrprojectv1 -name seed* -o -name *.seed.*)",
+      "Bash(lsof -ti:3000 -ti:3001)"
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx prisma:*)",
+      "Bash(node:*)",
+      "Bash(PGPASSWORD='Dcorp$8tqk' psql -h 118.69.108.41 -U postgres -d dcorphr -f /tmp/wfm_migration.sql 2>&1)",
+      "Bash(npx tsc:*)",
+      "Bash(grep -v \"^$\")",
+      "Bash(npx ts-node -e \":*)",
+      "Bash(find /Volumes/Working_Space/AI_DEV_Projects/hr-project/frontend/src/services -type f -name *.ts)",
+      "Bash(ls /Volumes/Working_Space/AI_DEV_Projects/hr-project/frontend/src/app/leave/[id]/)",
+      "Read(//private/tmp/**)",
+      "Bash(curl -s -X POST http://localhost:3001/api/v1/auth/login -H \"Content-Type: application/json\" -d '{\"\"\"\"email\"\"\"\":\"\"\"\"admin@example.com\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"password123\"\"\"\"}')",
+      "Bash(curl:*)",
+      "Bash(/dev/null grep:*)",
+      "Bash(/dev/null find:*)",
+      "Bash(find /Volumes/Working_Space/AI_DEV_Projects/hr-project/frontend/src/app -name *.tsx)",
+      "Bash(/usr/bin/curl --version)",
+      "Bash(xargs cat:*)",
+      "Bash(ls:*)",
+      "Bash(git init:*)",
+      "Bash(git config:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

@@ -1,0 +1,151 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+
+export default function LoginPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user, loading, login } = useAuth();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  // Redirect already-authenticated users
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace('/dashboard');
+    }
+  }, [loading, user, router]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    console.log('[login] Form submitted, email:', email);
+    setError('');
+    setSubmitting(true);
+    try {
+      console.log('[login] Calling login()...');
+      await login(email, password);
+      console.log('[login] login() succeeded, navigating to /dashboard');
+      const from = searchParams.get('from') ?? '/dashboard';
+      router.replace(from);
+    } catch (err: unknown) {
+      console.warn('[login] login() failed:', err);
+      const axiosErr = err as {
+        response?: { status?: number; data?: { message?: string | string[] } };
+      };
+      const status = axiosErr?.response?.status;
+      const rawMsg = axiosErr?.response?.data?.message;
+
+      let errorMsg: string;
+      if (status === 401) {
+        errorMsg = 'Invalid email or password.';
+      } else if (status === 403) {
+        errorMsg = 'Your account has been deactivated. Please contact HR.';
+      } else if (status !== undefined && status >= 500) {
+        errorMsg = 'Server error. Please try again later.';
+      } else if (rawMsg) {
+        errorMsg = Array.isArray(rawMsg) ? rawMsg[0] : rawMsg;
+      } else {
+        errorMsg = 'Login failed. Please check your connection and try again.';
+      }
+      setError(errorMsg);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-50 to-white px-4">
+      <div className="w-full max-w-md">
+        {/* Session verification banner — keeps form visible instead of blank screen */}
+        {loading && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
+            <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+            Verifying existing session…
+          </div>
+        )}
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600 shadow-lg">
+            <svg className="h-7 w-7 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-1a4 4 0 00-1.5-3.138A4 4 0 0118 17v1h-2zM4 18v-1a4 4 0 011.5-3.138A4 4 0 002 17v1h2z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">HR Management System</h1>
+          <p className="mt-1 text-sm text-gray-500">Sign in to your account</p>
+        </div>
+
+        {/* Card */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <Input
+              label="Email address"
+              type="email"
+              placeholder="you@company.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoFocus
+            />
+            <Input
+              label="Password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+
+            {error && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+
+            <Button type="submit" className="w-full" loading={submitting} disabled={loading} size="lg">
+              {loading ? 'Verifying session…' : 'Sign in'}
+            </Button>
+          </form>
+
+          {/* Demo accounts */}
+          <div className="mt-6 border-t border-gray-100 pt-5">
+            <p className="mb-3 text-xs font-medium uppercase tracking-wide text-gray-400">
+              Demo accounts
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: 'Admin',    email: 'admin@company.com',    color: 'hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700' },
+                { label: 'HR',       email: 'hr@company.com',       color: 'hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700' },
+                { label: 'Manager',  email: 'manager@company.com',  color: 'hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700' },
+                { label: 'Employee', email: 'employee@company.com', color: 'hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700' },
+              ].map((acc) => (
+                <button
+                  key={acc.email}
+                  type="button"
+                  onClick={() => {
+                    setEmail(acc.email);
+                    setPassword('password123');
+                  }}
+                  className={`rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-600 transition-colors text-left ${acc.color}`}
+                >
+                  <span className="font-semibold">{acc.label}</span>
+                  <br />
+                  <span className="text-gray-400 truncate block">{acc.email}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

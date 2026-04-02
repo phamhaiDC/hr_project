@@ -1,0 +1,31 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsNumber, IsString, IsISO8601, Min, Max } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class CheckOutDto {
+  @ApiPropertyOptional({ example: 10.7769, description: 'GPS latitude' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  lat?: number;
+
+  @ApiPropertyOptional({ example: 106.7009, description: 'GPS longitude' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  lng?: number;
+
+  @ApiPropertyOptional({ example: 'mobile-001', description: 'Device identifier' })
+  @IsOptional()
+  @IsString()
+  deviceId?: string;
+
+  @ApiPropertyOptional({ description: 'Override timestamp (ISO 8601). Defaults to now.' })
+  @IsOptional()
+  @IsISO8601()
+  timestamp?: string;
+}
