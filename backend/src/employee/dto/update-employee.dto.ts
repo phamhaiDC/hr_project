@@ -4,6 +4,7 @@ import {
   IsString,
   IsOptional,
   IsInt,
+  IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -56,4 +57,21 @@ export class UpdateEmployeeDto {
   @Type(() => Number)
   @IsInt()
   managerId?: number;
+
+  @ApiPropertyOptional({ description: 'Office Location ID (null to unassign)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  officeId?: number;
+
+  @ApiPropertyOptional({ enum: ['FIXED', 'SHIFT'] })
+  @IsOptional()
+  @IsIn(['FIXED', 'SHIFT'])
+  workingMode?: 'FIXED' | 'SHIFT';
+
+  @ApiPropertyOptional({ description: 'Shift ID (required when workingMode = SHIFT)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  shiftId?: number;
 }

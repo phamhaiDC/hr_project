@@ -95,7 +95,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } finally {
         clearTimeout(timeoutId);
-        if (active) setLoading(false);
+        // Always clear loading regardless of `active`. React 18 silently ignores
+        // setState on unmounted components, so this is safe. Without this,
+        // StrictMode double-invoke causes the cleanup to set active=false before
+        // the async init completes, leaving `loading` stuck at true.
+        setLoading(false);
       }
     }
 

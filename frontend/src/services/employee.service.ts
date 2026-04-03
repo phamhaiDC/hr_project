@@ -36,6 +36,19 @@ export interface UpdateEmployeePayload {
   managerId?: number;
 }
 
+export interface AdminUpdateProfilePayload {
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  status?: string;
+}
+
+export interface UpdateMePayload {
+  fullName?: string;
+  email?: string;
+  phone?: string;
+}
+
 export const employeeService = {
   list: (params?: ListEmployeeParams) =>
     api.get<PaginatedResponse<Employee>>('/employees', { params }).then((r) => r.data),
@@ -49,9 +62,29 @@ export const employeeService = {
   update: (id: number, payload: UpdateEmployeePayload) =>
     api.patch<Employee>(`/employees/${id}`, payload).then((r) => r.data),
 
+  /** Admin: update basic profile fields (name/email/phone/status) */
+  updateProfile: (id: number, payload: AdminUpdateProfilePayload) =>
+    api.patch<Employee>(`/employees/${id}/profile`, payload).then((r) => r.data),
+
+  /** Admin: reset an employee's password */
+  updatePassword: (id: number, newPassword: string) =>
+    api.patch<{ success: boolean }>(`/employees/${id}/password`, { newPassword }).then((r) => r.data),
+
   deactivate: (id: number) =>
     api.delete<Employee>(`/employees/${id}`).then((r) => r.data),
 
   history: (id: number) =>
     api.get(`/employees/${id}/history`).then((r) => r.data),
+
+  // ─── Self-profile ──────────────────────────────────────────────────────────
+
+  getMe: () =>
+    api.get<Employee>('/me').then((r) => r.data),
+
+  updateMe: (payload: UpdateMePayload) =>
+    api.patch<Employee>('/me', payload).then((r) => r.data),
+
+  /** Self: change own password (requires current password verification) */
+  updateMyPassword: (currentPassword: string, newPassword: string) =>
+    api.patch<{ success: boolean }>('/me/password', { currentPassword, newPassword }).then((r) => r.data),
 };

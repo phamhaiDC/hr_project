@@ -18,6 +18,8 @@ import {
 import { EmployeeService } from './employee.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
+import { AdminUpdateEmployeeDto } from './dto/admin-update-employee.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { ListEmployeeDto } from './dto/list-employee.dto';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -53,7 +55,7 @@ export class EmployeeController {
 
   @Patch(':id')
   @Roles('admin', 'hr')
-  @ApiOperation({ summary: 'Update employee (admin, hr only)' })
+  @ApiOperation({ summary: 'Full employee update — dept/role/shift changes (admin, hr only)' })
   @ApiParam({ name: 'id', type: 'integer' })
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -61,6 +63,30 @@ export class EmployeeController {
     @CurrentUser('id') actorId: number,
   ) {
     return this.employeeService.update(id, dto, actorId);
+  }
+
+  @Patch(':id/profile')
+  @Roles('admin', 'hr')
+  @ApiOperation({ summary: 'Update employee basic profile — name/email/phone/status (admin, hr only)' })
+  @ApiParam({ name: 'id', type: 'integer' })
+  updateProfile(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AdminUpdateEmployeeDto,
+    @CurrentUser('id') actorId: number,
+  ) {
+    return this.employeeService.adminUpdateProfile(id, dto, actorId);
+  }
+
+  @Patch(':id/password')
+  @Roles('admin')
+  @ApiOperation({ summary: 'Reset employee password (admin only)' })
+  @ApiParam({ name: 'id', type: 'integer' })
+  updatePassword(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ChangePasswordDto,
+    @CurrentUser('id') actorId: number,
+  ) {
+    return this.employeeService.updatePassword(id, dto.newPassword, actorId);
   }
 
   @Delete(':id')
@@ -75,9 +101,16 @@ export class EmployeeController {
   }
 
   @Get(':id/history')
-  @ApiOperation({ summary: 'Get employee change history' })
+  @ApiOperation({ summary: 'Get employee field-change history' })
   @ApiParam({ name: 'id', type: 'integer' })
   getHistory(@Param('id', ParseIntPipe) id: number) {
     return this.employeeService.getHistory(id);
+  }
+
+  @Get(':id/shift-history')
+  @ApiOperation({ summary: 'Get employee shift assignment history' })
+  @ApiParam({ name: 'id', type: 'integer' })
+  getShiftHistory(@Param('id', ParseIntPipe) id: number) {
+    return this.employeeService.getShiftHistory(id);
   }
 }

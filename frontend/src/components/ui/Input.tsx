@@ -19,6 +19,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           id={inputId}
           ref={ref}
+          suppressHydrationWarning
           className={cn(
             'block w-full rounded-lg border px-3 py-2 text-sm shadow-sm',
             'placeholder-gray-400 focus:outline-none focus:ring-2',

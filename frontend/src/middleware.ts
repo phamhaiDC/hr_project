@@ -9,6 +9,14 @@ const PUBLIC_PATHS = ['/login'];
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  if (process.env.NODE_ENV === 'development') {
+    const host = req.headers.get('host') ?? 'unknown';
+    if (host !== 'localhost:3000') {
+      // Only log non-localhost access so the console isn't flooded during normal dev
+      console.log(`[host] ${host} → ${pathname}`);
+    }
+  }
+
   // Pass through public routes
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
     return NextResponse.next();

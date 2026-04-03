@@ -47,10 +47,16 @@ api.interceptors.response.use(
     if (process.env.NODE_ENV === 'development') {
       // Always show the FULL url so port/prefix issues are immediately visible
       const fullUrl = `${error.config?.baseURL ?? BASE_URL}${error.config?.url ?? ''}`;
-      console.error(
-        `[api ✗] ${error.config?.method?.toUpperCase()} ${fullUrl} → ${error.response?.status ?? 'NO_RESPONSE'}`,
-        error.response?.data?.message ?? error.message,
-      );
+      const status = error.response?.status;
+      const label = `[api ✗] ${error.config?.method?.toUpperCase()} ${fullUrl} → ${status ?? 'NO_RESPONSE'}`;
+      const detail = error.response?.data?.message ?? error.message;
+      // 4xx = client/auth errors, expected in normal app flow — use warn to
+      // avoid triggering the Next.js 16 dev overlay (which fires on console.error)
+      if (status !== undefined && status < 500) {
+        console.warn(label, detail);
+      } else {
+        console.error(label, detail);
+      }
     }
 
     if (error.response?.status === 401) {

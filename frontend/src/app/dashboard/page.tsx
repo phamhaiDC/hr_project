@@ -80,8 +80,14 @@ export default function DashboardPage() {
         totalEmployees = empResult.value.meta.total;
         console.log('[dashboard] Total employees:', totalEmployees);
       } else {
-        console.error('[dashboard] Failed to fetch employee count:', empResult.reason);
-        setErrors((prev) => ({ ...prev, employees: extractError(empResult.reason, 'Failed to load employee data.') }));
+        const status = (empResult.reason as { response?: { status?: number } })?.response?.status;
+        if (status === 403) {
+          console.warn('[dashboard] Employee count: 403 (restricted role — skipping)');
+        } else {
+          const msg = extractError(empResult.reason, 'Failed to load employee data.');
+          console.error('[dashboard] Failed to fetch employee count:', msg);
+          setErrors((prev) => ({ ...prev, employees: msg }));
+        }
       }
 
       // ── Process probation employees ────────────────────────────────────────
@@ -91,8 +97,11 @@ export default function DashboardPage() {
         setProbationEmployees(probResult.value.data);
         console.log('[dashboard] Probation employees:', probationCount);
       } else {
-        console.error('[dashboard] Failed to fetch probation employees:', probResult.reason);
-        // Non-critical — don't block the page, just log
+        const status = (probResult.reason as { response?: { status?: number } })?.response?.status;
+        if (status !== 403) {
+          console.error('[dashboard] Failed to fetch probation employees:', extractError(probResult.reason, 'unknown'));
+        }
+        // Non-critical — don't block the page
       }
 
       // ── Process pending leaves ─────────────────────────────────────────────
@@ -102,15 +111,14 @@ export default function DashboardPage() {
         setPendingLeaves(leaveResult.value.data);
         console.log('[dashboard] Pending leave requests:', pendingLeaveCount);
       } else {
-        console.error('[dashboard] Failed to fetch leave requests:', leaveResult.reason);
-        const msg = extractError(leaveResult.reason, 'Failed to load leave data.');
-        // 403 is expected for employee role — don't surface as a hard error
-        const is403 =
-          (leaveResult.reason as { response?: { status?: number } })?.response?.status === 403;
-        if (!is403) {
-          setErrors((prev) => ({ ...prev, leaves: msg }));
+        const status = (leaveResult.reason as { response?: { status?: number } })?.response?.status;
+        if (status === 403) {
+          // Expected for employee role
+          console.log('[dashboard] Leave endpoint: 403 (employee role — hiding section)');
         } else {
-          console.log('[dashboard] Leave endpoint: 403 (employee role, expected — hiding section)');
+          const msg = extractError(leaveResult.reason, 'Failed to load leave data.');
+          console.error('[dashboard] Failed to fetch leave requests:', msg);
+          setErrors((prev) => ({ ...prev, leaves: msg }));
         }
       }
 
@@ -130,8 +138,15 @@ export default function DashboardPage() {
         setExpiringContracts(expiring);
         console.log('[dashboard] Contracts expiring in ≤30 days:', expiringContractCount, expiring);
       } else {
-        console.error('[dashboard] Failed to fetch contracts:', contractResult.reason);
-        setErrors((prev) => ({ ...prev, contracts: extractError(contractResult.reason, 'Failed to load contract data.') }));
+        const status = (contractResult.reason as { response?: { status?: number } })?.response?.status;
+        if (status === 403) {
+          // Expected for manager/employee role
+          console.log('[dashboard] Contracts endpoint: 403 (restricted role — hiding section)');
+        } else {
+          const msg = extractError(contractResult.reason, 'Failed to load contract data.');
+          console.error('[dashboard] Failed to fetch contracts:', msg);
+          setErrors((prev) => ({ ...prev, contracts: msg }));
+        }
       }
 
       setStats({ totalEmployees, probationCount, pendingLeaveCount, expiringContractCount });

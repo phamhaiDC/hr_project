@@ -18,16 +18,20 @@ function getLanIPs(): string[] {
 
 const lanIPs = getLanIPs();
 
+// Custom dev domains (hosts-file mapped or DNS). Extend this list as needed.
+const DEV_DOMAINS = ['dcorp.vn'];
+
 const nextConfig: NextConfig = {
   /**
    * Next.js 15+ rejects requests whose Host header doesn't match localhost
-   * unless the origin is explicitly allowed here.  Without this, any device
-   * on the LAN opening http://<machine-ip>:3000 gets "Invalid Host header".
+   * unless the origin is explicitly allowed here.
+   *  - lanIPs: LAN IP addresses auto-detected at startup
+   *  - DEV_DOMAINS: custom hostnames mapped via /etc/hosts or DNS
    */
-  allowedDevOrigins: lanIPs.flatMap((ip) => [
-    `${ip}:3000`,  // with port
-    ip,            // without port (some clients omit the default port)
-  ]),
+  allowedDevOrigins: [
+    ...lanIPs.flatMap((ip) => [`${ip}:3000`, ip]),
+    ...DEV_DOMAINS.flatMap((d) => [`${d}:3000`, d]),
+  ],
 
   /**
    * Proxy all /api/v1/* requests through Next.js to the NestJS backend.
@@ -35,6 +39,26 @@ const nextConfig: NextConfig = {
    * because the Next.js server and NestJS run on the same machine.
    * The browser never needs to know the backend port.
    */
+  async headers() {
+    return [
+      {
+        // Service worker must not be cached — browser needs the latest version on every load
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+        ],
+      },
+      {
+        source: '/manifest.json',
+        headers: [
+          { key: 'Content-Type', value: 'application/manifest+json' },
+          { key: 'Cache-Control', value: 'public, max-age=86400' },
+        ],
+      },
+    ];
+  },
+
   async rewrites() {
     const backendUrl =
       process.env.BACKEND_INTERNAL_URL ?? 'http://localhost:3001';

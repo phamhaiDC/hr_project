@@ -24,21 +24,66 @@ export interface PaginatedResponse<T> {
   };
 }
 
+// ─── Office Location ──────────────────────────────────────────────────────────
+
+export interface OfficeLocation {
+  id: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+  radius: number; // metres
+}
+
 // ─── Organization ─────────────────────────────────────────────────────────────
+
+export type WorkingType = 'FIXED' | 'SHIFT';
+export type WorkingMode = 'FIXED' | 'SHIFT';
 
 export interface Department {
   id: number;
   name: string;
+  code: string;
+  workingType: WorkingType;
+  description?: string | null;
+  isActive: boolean;
+  branchId?: number | null;
+  createdAt?: string;
+  updatedAt?: string;
+  branch?: Pick<Branch, 'id' | 'name'>;
+  positions?: Pick<Position, 'id' | 'name' | 'code'>[];
+  shifts?: DepartmentShift[];
+  _count?: { employees: number; positions: number; shifts: number };
+}
+
+export interface DepartmentShift {
+  id: number;
+  name: string;
+  startTime: string; // "HH:MM"
+  endTime: string;   // "HH:MM"
+  isCrossDay: boolean;
+  departmentId: number;
 }
 
 export interface Position {
   id: number;
   name: string;
+  code: string;
+  departmentId?: number | null;
+  description?: string | null;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  department?: Pick<Department, 'id' | 'name' | 'code' | 'workingType'>;
+  _count?: { employees: number };
 }
 
 export interface Branch {
   id: number;
   name: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  radius: number; // metres, default 50
+  _count?: { employees: number };
 }
 
 // ─── Employee ─────────────────────────────────────────────────────────────────
@@ -59,10 +104,14 @@ export interface Employee {
   probationEndDate?: string;
   createdAt?: string;
   updatedAt?: string;
+  workingMode?: WorkingMode;
+  shiftId?: number | null;
   branch?: Branch;
-  department?: Department;
-  position?: Position;
+  department?: Pick<Department, 'id' | 'name' | 'code' | 'workingType'>;
+  position?: Pick<Position, 'id' | 'name' | 'code'>;
   manager?: Pick<Employee, 'id' | 'fullName' | 'email' | 'code'>;
+  office?: OfficeLocation;
+  currentShift?: Pick<DepartmentShift, 'id' | 'name' | 'startTime' | 'endTime' | 'isCrossDay'>;
 }
 
 // ─── Contract ─────────────────────────────────────────────────────────────────
@@ -135,12 +184,18 @@ export interface LeaveBalanceWithLog {
 export interface Shift {
   id: number;
   name: string;
-  startTime: string;   // "HH:MM"
-  endTime: string;     // "HH:MM"
+  code: string;
+  startTime: string;      // "HH:MM"
+  endTime: string;        // "HH:MM"
+  isCrossDay: boolean;
   breakMinutes: number;
   graceLateMinutes: number;
   graceEarlyMinutes: number;
   isDefault: boolean;
+  isActive: boolean;
+  departmentId?: number | null;
+  department?: Pick<Department, 'id' | 'name' | 'code'>;
+  _count?: { currentEmployees: number; attendances: number };
 }
 
 export interface WorkLocation {
@@ -170,6 +225,8 @@ export interface AttendanceRecord {
   checkinLng?: number;
   checkoutLat?: number;
   checkoutLng?: number;
+  officeDistanceM?: number;
+  isInOffice?: boolean;
   // Leave integration
   isOnLeave?: boolean;
   leaveRequestId?: number | null;

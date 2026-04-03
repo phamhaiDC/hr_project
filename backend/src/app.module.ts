@@ -12,6 +12,9 @@ import { OffboardingModule } from './offboarding/offboarding.module';
 import { RewardModule } from './reward/reward.module';
 import { AuditModule } from './audit/audit.module';
 import { CalendarModule } from './calendar/calendar.module';
+import { OfficeModule } from './office/office.module';
+import { WorkingShiftModule } from './working-shift/working-shift.module';
+import { MeModule } from './me/me.module';
 
 @Module({
   imports: [
@@ -19,6 +22,7 @@ import { CalendarModule } from './calendar/calendar.module';
     PrismaModule,
     AuthModule,
     EmployeeModule,
+    MeModule,
     OrganizationModule,
     ContractModule,
     LeaveModule,
@@ -28,6 +32,8 @@ import { CalendarModule } from './calendar/calendar.module';
     OffboardingModule,
     RewardModule,
     AuditModule,
+    OfficeModule,
+    WorkingShiftModule,
   ],
 })
 export class AppModule {}

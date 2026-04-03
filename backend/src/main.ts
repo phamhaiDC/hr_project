@@ -77,6 +77,7 @@ async function bootstrap() {
 
   logger.log(`🚀 Local:   http://localhost:${port}/api/v1`);
   logger.log(`🌐 Network: http://${lanIP}:${port}/api/v1`);
+  logger.log(`🌍 Domain:  http://dcorp.vn:3000 → proxied via Next.js`);
   logger.log(`📚 Swagger: http://localhost:${port}/api/docs`);
 }
 

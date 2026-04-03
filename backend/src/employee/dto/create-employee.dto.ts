@@ -4,6 +4,7 @@ import {
   IsString,
   IsOptional,
   IsInt,
+  IsIn,
   MinLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -31,22 +32,22 @@ export class CreateEmployeeDto {
   @IsString()
   phone?: string;
 
-  @ApiProperty({ description: 'Branch ID (integer)' })
+  @ApiProperty({ description: 'Branch ID' })
   @Type(() => Number)
   @IsInt()
   branchId: number;
 
-  @ApiProperty({ description: 'Department ID (integer)' })
+  @ApiProperty({ description: 'Department ID' })
   @Type(() => Number)
   @IsInt()
   departmentId: number;
 
-  @ApiProperty({ description: 'Position ID (integer)' })
+  @ApiProperty({ description: 'Position ID' })
   @Type(() => Number)
   @IsInt()
   positionId: number;
 
-  @ApiPropertyOptional({ description: 'Manager Employee ID (integer)' })
+  @ApiPropertyOptional({ description: 'Manager Employee ID' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -61,4 +62,25 @@ export class CreateEmployeeDto {
   @IsOptional()
   @IsString()
   role?: string;
+
+  @ApiPropertyOptional({ description: 'Office Location ID' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  officeId?: number;
+
+  @ApiPropertyOptional({
+    enum: ['FIXED', 'SHIFT'],
+    default: 'FIXED',
+    description: 'FIXED for standard schedule; SHIFT for Command Center rotating shifts',
+  })
+  @IsOptional()
+  @IsIn(['FIXED', 'SHIFT'])
+  workingMode?: 'FIXED' | 'SHIFT';
+
+  @ApiPropertyOptional({ description: 'Shift ID (required when workingMode = SHIFT)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  shiftId?: number;
 }

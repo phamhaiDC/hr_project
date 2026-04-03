@@ -17,6 +17,9 @@ datasource db {
 model Branch {
   id          Int          @id @default(autoincrement())
   name        String
+  latitude    Float?
+  longitude   Float?
+  radius      Int          @default(50)
   departments Department[]
   employees   Employee[]
 
@@ -24,19 +27,36 @@ model Branch {
 }
 
 model Department {
-  id        Int        @id @default(autoincrement())
-  name      String?
-  branchId  Int?       @map("branch_id")
-  branch    Branch?    @relation(fields: [branchId], references: [id])
-  employees Employee[]
+  id          Int       @id @default(autoincrement())
+  name        String
+  code        String    @unique
+  workingType String    @default("FIXED") @map("working_type") // FIXED | SHIFT
+  description String?
+  isActive    Boolean   @default(true)   @map("is_active")
+  branchId    Int?      @map("branch_id")
+  createdAt   DateTime  @default(now())  @map("created_at")
+  updatedAt   DateTime  @updatedAt       @map("updated_at")
+
+  branch      Branch?    @relation(fields: [branchId], references: [id])
+  employees   Employee[]
+  positions   Position[]
+  shifts      Shift[]
 
   @@map("department")
 }
 
 model Position {
-  id        Int        @id @default(autoincrement())
-  name      String?
-  employees Employee[]
+  id           Int        @id @default(autoincrement())
+  name         String
+  code         String     @unique
+  departmentId Int?       @map("department_id")
+  description  String?
+  isActive     Boolean    @default(true)  @map("is_active")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt      @map("updated_at")
+
+  department   Department? @relation(fields: [departmentId], references: [id])
+  employees    Employee[]
 
   @@map("position")
 }
@@ -61,6 +81,12 @@ model Employee {
   // ── added via migration ──
   password         String?
   role             String?   @default("employee") // admin | hr | manager | employee
+  // ── office location ──
+  officeId         Int?      @map("office_id")
+  office           OfficeLocation? @relation(fields: [officeId], references: [id])
+  // ── working mode / shift ─────────────────────────────
+  workingMode      String?   @default("FIXED") @map("working_mode") // FIXED | SHIFT
+  shiftId          Int?      @map("shift_id")
   // ─────────────────────────
   createdAt        DateTime? @default(now()) @map("created_at")
   updatedAt        DateTime? @updatedAt @map("updated_at")
@@ -70,17 +96,19 @@ model Employee {
   position         Position?   @relation(fields: [positionId], references: [id])
   manager          Employee?   @relation("ManagerEmployee", fields: [managerId], references: [id])
   subordinates     Employee[]  @relation("ManagerEmployee")
+  currentShift     Shift?      @relation("EmployeeCurrentShift", fields: [shiftId], references: [id])
+  shiftAssignments EmployeeShiftAssignment[]
 
-  leaveRequests        LeaveRequest[]
-  approvedLeaves       LeaveApproval[]      @relation("LeaveApprover")
-  attendances          Attendance[]
-  attendanceLogs       AttendanceLog[]
-  resignationRequests  ResignationRequest[]
+  leaveRequests         LeaveRequest[]
+  approvedLeaves        LeaveApproval[]       @relation("LeaveApprover")
+  attendances           Attendance[]
+  attendanceLogs        AttendanceLog[]
+  resignationRequests   ResignationRequest[]
   offboardingChecklists OffboardingChecklist[]
-  employeeHistories    EmployeeHistory[]    @relation("EmployeeHistoryEmployee")
-  auditLogs            AuditLog[]
-  leaveBalance         LeaveBalance?
-  leaveAccrualLogs     LeaveAccrualLog[]
+  employeeHistories     EmployeeHistory[]     @relation("EmployeeHistoryEmployee")
+  auditLogs             AuditLog[]
+  leaveBalance          LeaveBalance?
+  leaveAccrualLogs      LeaveAccrualLog[]
 
   @@map("employee")
 }
@@ -212,23 +240,64 @@ model Holiday {
 }
 
 // ─────────────────────────────────────────────
+// Office Location
+// ─────────────────────────────────────────────
+
+model OfficeLocation {
+  id        Int        @id @default(autoincrement())
+  name      String
+  latitude  Float
+  longitude Float
+  radius    Int                 // geofence radius in metres
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
+
+  employees Employee[]
+
+  @@map("office_location")
+}
+
+// ─────────────────────────────────────────────
 // WFM – Shift & Location
 // ─────────────────────────────────────────────
 
 model Shift {
   id                  Int          @id @default(autoincrement())
   name                String
-  startTime           String       @map("start_time")          // "HH:MM"
-  endTime             String       @map("end_time")            // "HH:MM"
-  breakMinutes        Int          @default(60)  @map("break_minutes")
-  graceLateMinutes    Int          @default(15)  @map("grace_late_minutes")
-  graceEarlyMinutes   Int          @default(15)  @map("grace_early_minutes")
+  code                String       @unique
+  startTime           String       @map("start_time")           // "HH:MM"
+  endTime             String       @map("end_time")             // "HH:MM"
+  isCrossDay          Boolean      @default(false) @map("is_cross_day") // endTime is on the next calendar day
+  breakMinutes        Int          @default(60)   @map("break_minutes")
+  graceLateMinutes    Int          @default(15)   @map("grace_late_minutes")
+  graceEarlyMinutes   Int          @default(15)   @map("grace_early_minutes")
   isDefault           Boolean      @default(false) @map("is_default")
+  isActive            Boolean      @default(true)  @map("is_active")
+  // null = global shift; set = department-specific (e.g. CC shifts)
+  departmentId        Int?         @map("department_id")
   createdAt           DateTime     @default(now()) @map("created_at")
 
+  department          Department?  @relation(fields: [departmentId], references: [id])
   attendances         Attendance[]
+  currentEmployees    Employee[]   @relation("EmployeeCurrentShift")
+  shiftAssignments    EmployeeShiftAssignment[]
 
   @@map("shift")
+}
+
+// ── Employee Shift Assignment (history) ──────────────────────────────────────
+
+model EmployeeShiftAssignment {
+  id            Int      @id @default(autoincrement())
+  employeeId    Int      @map("employee_id")
+  shiftId       Int      @map("shift_id")
+  effectiveDate DateTime @map("effective_date") @db.Date
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+  shift    Shift    @relation(fields: [shiftId], references: [id])
+
+  @@map("employee_shift_assignment")
 }
 
 model WorkLocation {
@@ -283,10 +352,14 @@ model Attendance {
   isEarlyOut    Boolean  @default(false) @map("is_early_out")
   isOvertime    Boolean  @default(false) @map("is_overtime")
   overtimeHours Decimal? @map("overtime_hours") @db.Decimal(5, 2)
-  checkinLat      Float?   @map("checkin_lat")
-  checkinLng      Float?   @map("checkin_lng")
-  checkoutLat     Float?   @map("checkout_lat")
-  checkoutLng     Float?   @map("checkout_lng")
+  checkinLat        Float?   @map("checkin_lat")
+  checkinLng        Float?   @map("checkin_lng")
+  checkoutLat       Float?   @map("checkout_lat")
+  checkoutLng       Float?   @map("checkout_lng")
+  officeDistanceM   Float?   @map("office_distance_m")
+  isInOffice        Boolean  @default(false) @map("is_in_office")
+  hasLocation       Boolean  @default(false) @map("has_location")
+  locationNote      String?  @map("location_note")
   // ── Leave integration ────────────────────────
   isOnLeave       Boolean  @default(false) @map("is_on_leave")
   leaveRequestId  Int?     @map("leave_request_id")

@@ -27,6 +27,7 @@ export interface CheckInPayload {
   lng?: number;
   deviceId?: string;
   timestamp?: string;
+  locationNote?: string;
 }
 
 export interface CheckOutPayload {
@@ -43,11 +44,21 @@ export interface MyRecordsParams {
   dateTo?: string;
 }
 
+export interface NearestBranch {
+  id: number;
+  name: string;
+  distanceM: number;
+  isInOffice: boolean;
+}
+
 export interface CheckInResponse {
   attendance: AttendanceRecord;
   isLate: boolean;
   shift: { name: string; startTime: string; endTime: string } | null;
   location: { id: number; distanceM: number } | null;
+  office: { status: 'IN_OFFICE' | 'OUTSIDE'; distanceM: number } | null;
+  locationSource: 'GPS' | 'NO_LOCATION';
+  nearestBranch: NearestBranch | null;
 }
 
 export interface CheckOutResponse {

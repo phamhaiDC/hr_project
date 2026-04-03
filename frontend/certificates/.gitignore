@@ -1,0 +1,4 @@
+# Ignore all generated cert files — never commit private keys
+*
+!.gitignore
+!README.md

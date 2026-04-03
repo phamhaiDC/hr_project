@@ -29,7 +29,8 @@ async function proxy(req: NextRequest, pathSegments: string[]): Promise<NextResp
   const target = `${BACKEND}/api/v1/${path}${search}`;
 
   if (process.env.NODE_ENV === 'development') {
-    console.log(`[proxy] ${req.method} ${target}`);
+    const host = req.headers.get('host') ?? 'unknown';
+    console.log(`[proxy] ${req.method} ${target}  (host: ${host})`);
   }
 
   const headers = new Headers();
@@ -38,10 +39,10 @@ async function proxy(req: NextRequest, pathSegments: string[]): Promise<NextResp
     if (val) headers.set(key, val);
   }
 
-  const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method);
-  const body = hasBody ? await req.arrayBuffer() : undefined;
-
   try {
+    const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method);
+    const body = hasBody ? await req.arrayBuffer() : undefined;
+
     const upstream = await fetch(target, {
       method: req.method,
       headers,
@@ -69,18 +70,21 @@ async function proxy(req: NextRequest, pathSegments: string[]): Promise<NextResp
 // In Next.js 15+, dynamic route params are wrapped in a Promise.
 type Ctx = { params: Promise<{ path: string[] }> };
 
-export async function GET(req: NextRequest, { params }: Ctx) {
-  return proxy(req, (await params).path);
+async function handle(req: NextRequest, ctx: Ctx): Promise<NextResponse> {
+  try {
+    const { path } = await ctx.params;
+    return await proxy(req, path);
+  } catch (err) {
+    console.error('[proxy] Handler error:', err);
+    return NextResponse.json(
+      { statusCode: 502, message: 'Backend unavailable' },
+      { status: 502 },
+    );
+  }
 }
-export async function POST(req: NextRequest, { params }: Ctx) {
-  return proxy(req, (await params).path);
-}
-export async function PUT(req: NextRequest, { params }: Ctx) {
-  return proxy(req, (await params).path);
-}
-export async function PATCH(req: NextRequest, { params }: Ctx) {
-  return proxy(req, (await params).path);
-}
-export async function DELETE(req: NextRequest, { params }: Ctx) {
-  return proxy(req, (await params).path);
-}
+
+export const GET    = (req: NextRequest, ctx: Ctx) => handle(req, ctx);
+export const POST   = (req: NextRequest, ctx: Ctx) => handle(req, ctx);
+export const PUT    = (req: NextRequest, ctx: Ctx) => handle(req, ctx);
+export const PATCH  = (req: NextRequest, ctx: Ctx) => handle(req, ctx);
+export const DELETE = (req: NextRequest, ctx: Ctx) => handle(req, ctx);

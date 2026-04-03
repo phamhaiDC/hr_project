@@ -30,4 +30,10 @@ export class ListEmployeeDto extends PaginationDto {
   @Type(() => Number)
   @IsInt()
   departmentId?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  managerId?: number;
 }

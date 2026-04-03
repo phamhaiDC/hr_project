@@ -22,21 +22,26 @@ export class ShiftService {
 
   async create(dto: CreateShiftDto) {
     if (dto.isDefault) {
-      // Un-set current default before setting a new one
       await this.prisma.shift.updateMany({
         where: { isDefault: true },
-        data: { isDefault: false },
+        data:  { isDefault: false },
       });
     }
+    // Auto-detect isCrossDay when end < start
+    const isCrossDay = hhmmToMinutes(dto.endTime) < hhmmToMinutes(dto.startTime);
+
     return this.prisma.shift.create({
       data: {
-        name: dto.name,
-        startTime: dto.startTime,
-        endTime: dto.endTime,
-        breakMinutes: dto.breakMinutes ?? 60,
-        graceLateMinutes: dto.graceLateMinutes ?? 15,
+        name:              dto.name,
+        code:              `SHIFT_${Date.now()}`, // auto code for legacy endpoint
+        startTime:         dto.startTime,
+        endTime:           dto.endTime,
+        isCrossDay,
+        breakMinutes:      dto.breakMinutes      ?? 60,
+        graceLateMinutes:  dto.graceLateMinutes  ?? 15,
         graceEarlyMinutes: dto.graceEarlyMinutes ?? 15,
-        isDefault: dto.isDefault ?? false,
+        isDefault:         dto.isDefault         ?? false,
+        isActive:          true,
       },
     });
   }
@@ -48,16 +53,28 @@ export class ShiftService {
     if (dto.isDefault) {
       await this.prisma.shift.updateMany({
         where: { isDefault: true, id: { not: id } },
-        data: { isDefault: false },
+        data:  { isDefault: false },
       });
     }
 
-    return this.prisma.shift.update({ where: { id }, data: dto });
+    const newStart = dto.startTime ?? shift.startTime;
+    const newEnd   = dto.endTime   ?? shift.endTime;
+    const isCrossDay = dto.startTime || dto.endTime
+      ? hhmmToMinutes(newEnd) < hhmmToMinutes(newStart)
+      : undefined;
+
+    return this.prisma.shift.update({
+      where: { id },
+      data: {
+        ...dto,
+        ...(isCrossDay !== undefined ? { isCrossDay } : {}),
+      },
+    });
   }
 
   /**
    * Auto-detect the best shift for a given local time.
-   * Searches within a ±90-minute window around each shift's start time.
+   * Handles cross-day (night) shifts correctly.
    * Falls back to the default shift, then the first shift in the list.
    */
   async detectShift(now: Date): Promise<Awaited<ReturnType<typeof this.findAll>>[number] | null> {
@@ -68,14 +85,19 @@ export class ShiftService {
 
     const candidates = shifts.filter((s) => {
       const start = hhmmToMinutes(s.startTime);
-      const end = hhmmToMinutes(s.endTime);
-      // Window: 1h before shift start → 2h after shift end
-      return currentMin >= start - 60 && currentMin <= end + 120;
+      let end = hhmmToMinutes(s.endTime);
+      if (s.isCrossDay && end <= start) end += 1440;
+
+      // Normalize currentMin for cross-day shifts (early-morning hours)
+      let normalMin = currentMin;
+      if (s.isCrossDay && currentMin < start) normalMin += 1440;
+
+      // Accept within a 90-min window before start and 2h after end
+      return normalMin >= start - 90 && normalMin <= end + 120;
     });
 
     if (candidates.length === 1) return candidates[0];
     if (candidates.length > 1) {
-      // Closest start time wins
       return candidates.reduce((best, s) => {
         const d1 = Math.abs(hhmmToMinutes(best.startTime) - currentMin);
         const d2 = Math.abs(hhmmToMinutes(s.startTime) - currentMin);

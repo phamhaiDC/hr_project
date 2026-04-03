@@ -24,6 +24,14 @@ export class CheckInDto {
   @IsString()
   deviceId?: string;
 
+  @ApiPropertyOptional({
+    description: 'Reason for check-in without GPS (required when lat/lng are absent)',
+    example: 'Working from client site — GPS unavailable indoors',
+  })
+  @IsOptional()
+  @IsString()
+  locationNote?: string;
+
   @ApiPropertyOptional({ description: 'Override timestamp (ISO 8601). Defaults to now.' })
   @IsOptional()
   @IsISO8601()

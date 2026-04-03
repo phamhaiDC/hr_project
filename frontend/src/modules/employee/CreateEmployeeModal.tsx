@@ -99,7 +99,7 @@ export function CreateEmployeeModal({
   useEffect(() => {
     if (!form.branchId) return;
     organizationService
-      .departments(Number(form.branchId))
+      .departments({ branchId: Number(form.branchId) })
       .then(setDepartments);
     setForm((f) => ({ ...f, departmentId: '', positionId: '' }));
   }, [form.branchId]);
@@ -108,7 +108,7 @@ export function CreateEmployeeModal({
   useEffect(() => {
     if (!form.departmentId) return;
     organizationService
-      .positions(Number(form.departmentId))
+      .positions({ departmentId: Number(form.departmentId) })
       .then(setPositions);
     setForm((f) => ({ ...f, positionId: '' }));
   }, [form.departmentId]);

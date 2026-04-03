@@ -1,5 +1,12 @@
 'use client';
 
+// NOTE: useSearchParams() in a 'use client' page does NOT need a Suspense
+// wrapper — that rule applies only to Server Components.  Adding Suspense
+// inside a 'use client' component causes a hydration mismatch: the server
+// renders the Suspense fallback as plain HTML, but the client tries to
+// reconcile a <Suspense> boundary node → React throws a hydration error.
+// Solution: use useSearchParams() directly here, no Suspense needed.
+
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,21 +14,24 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
 export default function LoginPage() {
-  const router = useRouter();
+  const router       = useRouter();
   const searchParams = useSearchParams();
   const { user, loading, login } = useAuth();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email,      setEmail]      = useState('');
+  const [password,   setPassword]   = useState('');
+  const [error,      setError]      = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Redirect already-authenticated users
+  // Redirect already-authenticated users (e.g. back-navigated to /login).
+  // Guarded against `submitting` so this never races with handleSubmit's
+  // direct router.replace() call in React 19 concurrent mode.
   useEffect(() => {
+    if (submitting) return;
     if (!loading && user) {
-      router.replace('/dashboard');
+      router.replace(searchParams.get('from') ?? '/dashboard');
     }
-  }, [loading, user, router]);
+  }, [loading, user, submitting, router, searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,10 +39,12 @@ export default function LoginPage() {
     setError('');
     setSubmitting(true);
     try {
-      console.log('[login] Calling login()...');
       await login(email, password);
-      console.log('[login] login() succeeded, navigating to /dashboard');
+      // Direct redirect — more reliable than relying on a useEffect under
+      // React 19's concurrent scheduler, where router.replace() queued from
+      // a useEffect can be deferred or dropped after a batched state update.
       const from = searchParams.get('from') ?? '/dashboard';
+      console.log('[login] Success — redirecting to', from);
       router.replace(from);
     } catch (err: unknown) {
       console.warn('[login] login() failed:', err);
@@ -55,7 +67,6 @@ export default function LoginPage() {
         errorMsg = 'Login failed. Please check your connection and try again.';
       }
       setError(errorMsg);
-    } finally {
       setSubmitting(false);
     }
   }
@@ -63,7 +74,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-50 to-white px-4">
       <div className="w-full max-w-md">
-        {/* Session verification banner — keeps form visible instead of blank screen */}
+        {/* Session verification banner */}
         {loading && (
           <div className="mb-4 flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
             <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -73,6 +84,7 @@ export default function LoginPage() {
             Verifying existing session…
           </div>
         )}
+
         {/* Header */}
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600 shadow-lg">
@@ -86,7 +98,7 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" suppressHydrationWarning>
             <Input
               label="Email address"
               type="email"

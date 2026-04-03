@@ -19,25 +19,82 @@ async function main() {
 
   // ── Departments ────────────────────────────────────────────
   const deptIT = await prisma.department.create({
-    data: { name: 'Information Technology', branchId: branchHCM.id },
+    data: { name: 'Information Technology', code: 'IT', branchId: branchHCM.id },
   });
 
   const deptHR = await prisma.department.create({
-    data: { name: 'Human Resources', branchId: branchHN.id },
+    data: { name: 'Human Resources', code: 'HR', branchId: branchHN.id },
   });
 
-  console.log('Departments created:', deptIT.name, '|', deptHR.name);
+  const deptCC = await prisma.department.create({
+    data: { name: 'Command Center', code: 'CC', workingType: 'SHIFT', branchId: branchHCM.id },
+  });
+
+  // Global default shift for FIXED departments
+  await prisma.shift.upsert({
+    where: { code: 'STANDARD' },
+    update: {},
+    create: {
+      name: 'Standard Working Shift',
+      code: 'STANDARD',
+      startTime: '08:00',
+      endTime: '18:00',
+      isCrossDay: false,
+      breakMinutes: 60,
+      graceLateMinutes: 15,
+      graceEarlyMinutes: 15,
+      isDefault: true,
+      isActive: true,
+    },
+  });
+
+  // Auto-create CC shifts
+  await prisma.shift.createMany({
+    data: [
+      { name: 'Morning',   code: 'CC_MORNING',   startTime: '07:00', endTime: '15:00', isCrossDay: false, departmentId: deptCC.id, breakMinutes: 0 },
+      { name: 'Afternoon', code: 'CC_AFTERNOON', startTime: '15:00', endTime: '23:00', isCrossDay: false, departmentId: deptCC.id, breakMinutes: 0 },
+      { name: 'Night',     code: 'CC_NIGHT',     startTime: '23:00', endTime: '07:00', isCrossDay: true,  departmentId: deptCC.id, breakMinutes: 0 },
+    ],
+    skipDuplicates: true,
+  });
+
+  console.log('Departments created:', deptIT.name, '|', deptHR.name, '|', deptCC.name);
 
   // ── Positions ──────────────────────────────────────────────
   const posAdmin = await prisma.position.create({
-    data: { name: 'System Administrator' },
+    data: { name: 'System Administrator', code: 'SYS-ADMIN', departmentId: deptIT.id },
   });
 
   const posSWE = await prisma.position.create({
-    data: { name: 'Software Engineer' },
+    data: { name: 'Software Engineer', code: 'SWE', departmentId: deptIT.id },
+  });
+
+  const posNOC = await prisma.position.create({
+    data: { name: 'Network Operations Engineer', code: 'NOC', departmentId: deptCC.id },
   });
 
   console.log('Positions created');
+
+  // ── Office Locations ───────────────────────────────────────
+  const officeHCM = await prisma.officeLocation.create({
+    data: {
+      name: 'HCM',
+      latitude: 10.7719,
+      longitude: 106.7042,
+      radius: 100,
+    },
+  });
+
+  const officeHN = await prisma.officeLocation.create({
+    data: {
+      name: 'Hanoi',
+      latitude: 21.0285,
+      longitude: 105.8342,
+      radius: 100,
+    },
+  });
+
+  console.log('Office locations created:', officeHCM.name, '|', officeHN.name);
 
   // ── Employees ──────────────────────────────────────────────
   const saltRounds = 12;
@@ -54,6 +111,7 @@ async function main() {
       branchId: branchHCM.id,
       departmentId: deptIT.id,
       positionId: posAdmin.id,
+      officeId: officeHCM.id,
     },
   });
 
@@ -65,9 +123,10 @@ async function main() {
       password: hashedPassword,
       role: 'hr',
       status: 'official',
-      branchId: branchHCM.id,
+      branchId: branchHN.id,
       departmentId: deptHR.id,
       positionId: posSWE.id,
+      officeId: officeHN.id,
     },
   });
 
@@ -82,6 +141,7 @@ async function main() {
       branchId: branchHCM.id,
       departmentId: deptIT.id,
       positionId: posSWE.id,
+      officeId: officeHCM.id,
     },
   });
 
@@ -97,6 +157,7 @@ async function main() {
       departmentId: deptIT.id,
       positionId: posSWE.id,
       managerId: managerEmp.id,
+      officeId: officeHCM.id,
     },
   });
 
