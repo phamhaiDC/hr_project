@@ -74,4 +74,8 @@ export class UpdateEmployeeDto {
   @Type(() => Number)
   @IsInt()
   shiftId?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  telegramId?: string;
 }

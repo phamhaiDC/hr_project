@@ -5,7 +5,7 @@ import { PageSpinner } from './Spinner';
 
 export interface Column<T> {
   key: string;
-  header: string;
+  header: React.ReactNode;
   render: (row: T, index: number) => React.ReactNode;
   headerClassName?: string;
   cellClassName?: string;

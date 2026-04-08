@@ -9,7 +9,9 @@ import {
   ParseIntPipe,
   HttpCode,
   HttpStatus,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -168,12 +170,25 @@ export class AttendanceController {
   }
 
   // ── GET /attendance/report ────────────────────────────────────────────────
-
   @Get('report')
+  @Roles('admin', 'hr', 'manager', 'employee')
+  @ApiOperation({ summary: 'Attendance report with filters' })
+  getReport(
+    @Query() dto: ReportAttendanceDto,
+    @CurrentUser() user: { id: number; role: string }
+  ) {
+    return this.attendanceService.getReport(dto, user);
+  }
+
+  @Get('report/export')
   @Roles('admin', 'hr', 'manager')
-  @ApiOperation({ summary: 'Attendance report with filters (admin, hr, manager)' })
-  getReport(@Query() dto: ReportAttendanceDto) {
-    return this.attendanceService.getReport(dto);
+  @ApiOperation({ summary: 'Export attendance report to Excel' })
+  exportReport(
+    @Query() dto: ReportAttendanceDto,
+    @CurrentUser() user: { id: number; role: string },
+    @Res() res: any,
+  ) {
+    return this.attendanceService.exportReport(dto, user, res);
   }
 
   // ── GET /attendance ───────────────────────────────────────────────────────

@@ -10,10 +10,10 @@ interface FieldProps {
 
 function Field({ label, value }: FieldProps) {
   return (
-    <div>
+    <>
       <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">{label}</dt>
-      <dd className="mt-1 text-sm text-gray-800">{value ?? '—'}</dd>
-    </div>
+      <dd className="mt-1 mb-4 text-sm text-gray-800">{value ?? '—'}</dd>
+    </>
   );
 }
 
@@ -62,6 +62,7 @@ export function EmployeeProfile({ employee }: EmployeeProfileProps) {
             } />
             <Field label="Join Date" value={formatDate(employee.joinDate)} />
             <Field label="Status" value={statusBadge(employee.status)} />
+            <Field label="Telegram ID" value={employee.telegramId} />
           </dl>
         </div>
 

@@ -3,9 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --hostname 0.0.0.0",
+    "dev": "next dev --hostname 0.0.0.0 --webpack",
     "dev:webpack": "next dev --hostname 0.0.0.0 --webpack",
-    "dev:https": "node server-https.mjs",
+    "dev:https": "next dev --hostname dcorp.vn --port 3000 --webpack --experimental-https --experimental-https-key certificates/dcorp.vn-key.pem --experimental-https-cert certificates/dcorp.vn.pem",
+    "dev:dual": "node server-dual.mjs",
+    "dev:proxy": "node https-proxy.mjs",
     "certs": "bash scripts/gen-cert.sh",
     "clean": "rm -rf .next",
     "build": "next build",

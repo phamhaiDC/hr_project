@@ -8,7 +8,6 @@ import { Select } from '@/components/ui/Select';
 import { Alert } from '@/components/ui/Alert';
 import { employeeService } from '@/services/employee.service';
 import { organizationService } from '@/services/organization.service';
-import { capitalise } from '@/utils/format';
 import type { Employee, Branch, Department, Position } from '@/types';
 
 interface EditEmployeeModalProps {
@@ -27,12 +26,13 @@ interface FormState {
   branchId: string;
   departmentId: string;
   positionId: string;
+  telegramId: string;
 }
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
 export function EditEmployeeModal({ open, onClose, employee, onSuccess }: EditEmployeeModalProps) {
-  const [form, setForm]         = useState<FormState>({ fullName: '', email: '', phone: '', status: '', role: '', branchId: '', departmentId: '', positionId: '' });
+  const [form, setForm]         = useState<FormState>({ fullName: '', email: '', phone: '', status: '', role: '', branchId: '', departmentId: '', positionId: '', telegramId: '' });
   const [errors, setErrors]     = useState<FormErrors>({});
   const [apiError, setApiError] = useState('');
   const [saving, setSaving]     = useState(false);
@@ -55,6 +55,7 @@ export function EditEmployeeModal({ open, onClose, employee, onSuccess }: EditEm
       branchId:     String(employee.branchId     ?? ''),
       departmentId: String(employee.departmentId ?? ''),
       positionId:   String(employee.positionId   ?? ''),
+      telegramId:   employee.telegramId         ?? '',
     });
     setErrors({});
     setApiError('');
@@ -113,7 +114,7 @@ export function EditEmployeeModal({ open, onClose, employee, onSuccess }: EditEm
     return Object.keys(errs).length === 0;
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!validate()) return;
 
@@ -129,6 +130,7 @@ export function EditEmployeeModal({ open, onClose, employee, onSuccess }: EditEm
         branchId:     form.branchId     ? Number(form.branchId)     : undefined,
         departmentId: form.departmentId ? Number(form.departmentId) : undefined,
         positionId:   form.positionId   ? Number(form.positionId)   : undefined,
+        telegramId:   form.telegramId || undefined,
       });
       onSuccess(updated);
       onClose();
@@ -175,6 +177,12 @@ export function EditEmployeeModal({ open, onClose, employee, onSuccess }: EditEm
               error={errors.phone}
             />
           </div>
+          <Input
+            label="Telegram ID (optional)"
+            placeholder="@username or ID"
+            value={form.telegramId}
+            onChange={(e) => set('telegramId', e.target.value)}
+          />
           <div className="grid grid-cols-2 gap-4">
             <Select
               label="Status"

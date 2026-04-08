@@ -11,7 +11,6 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
 export default function LoginPage() {
@@ -41,9 +40,6 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await login(email, password);
-      // Direct redirect — more reliable than relying on a useEffect under
-      // React 19's concurrent scheduler, where router.replace() queued from
-      // a useEffect can be deferred or dropped after a batched state update.
       const from = searchParams.get('from') ?? '/dashboard';
       console.log('[login] Success — redirecting to', from);
       router.replace(from);
@@ -130,9 +126,22 @@ export default function LoginPage() {
               </div>
             )}
 
-            <Button type="submit" className="w-full" loading={submitting} disabled={loading} size="lg">
-              {loading ? 'Verifying session…' : 'Sign in'}
-            </Button>
+            <button
+              type="submit"
+              className="flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+              disabled={loading || submitting}
+            >
+              {submitting ? (
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Signing in…
+                </div>
+              ) : loading ? (
+                'Verifying session…'
+              ) : (
+                'Sign in'
+              )}
+            </button>
           </form>
 
           {/* Demo accounts */}

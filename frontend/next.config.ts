@@ -3,30 +3,37 @@ import * as os from 'os';
 
 /**
  * Returns every non-loopback IPv4 address on this machine.
- * Used to populate allowedDevOrigins so the Next.js dev server accepts
- * requests from other devices on the same LAN.
  */
 function getLanIPs(): string[] {
   const ips: string[] = [];
   for (const ifaces of Object.values(os.networkInterfaces())) {
     for (const iface of ifaces ?? []) {
-      if (iface.family === 'IPv4' && !iface.internal) ips.push(iface.address);
+      if (iface.family === 'IPv4' && !iface.internal) {
+        ips.push(iface.address);
+      }
     }
   }
   return ips;
 }
 
 const lanIPs = getLanIPs();
-
-// Custom dev domains (hosts-file mapped or DNS). Extend this list as needed.
 const DEV_DOMAINS = ['dcorp.vn'];
 
 const nextConfig: NextConfig = {
   /**
-   * Next.js 15+ rejects requests whose Host header doesn't match localhost
-   * unless the origin is explicitly allowed here.
-   *  - lanIPs: LAN IP addresses auto-detected at startup
-   *  - DEV_DOMAINS: custom hostnames mapped via /etc/hosts or DNS
+   * ⚠️ Next.js 16: KHÔNG còn experimental.turbo
+   * → Không config ở đây nữa
+   */
+
+  /**
+   * Force Webpack (giữ để tránh Turbopack fallback)
+   */
+  webpack: (config) => {
+    return config;
+  },
+
+  /**
+   * Allow LAN + custom domain
    */
   allowedDevOrigins: [
     ...lanIPs.flatMap((ip) => [`${ip}:3000`, ip]),
@@ -34,15 +41,11 @@ const nextConfig: NextConfig = {
   ],
 
   /**
-   * Proxy all /api/v1/* requests through Next.js to the NestJS backend.
-   * BACKEND_INTERNAL_URL is server-side only — it always points to localhost
-   * because the Next.js server and NestJS run on the same machine.
-   * The browser never needs to know the backend port.
+   * Headers config
    */
   async headers() {
     return [
       {
-        // Service worker must not be cached — browser needs the latest version on every load
         source: '/sw.js',
         headers: [
           { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
@@ -59,9 +62,13 @@ const nextConfig: NextConfig = {
     ];
   },
 
+  /**
+   * Proxy API → backend (NestJS)
+   */
   async rewrites() {
     const backendUrl =
       process.env.BACKEND_INTERNAL_URL ?? 'http://localhost:3001';
+
     return [
       {
         source: '/api/v1/:path*',

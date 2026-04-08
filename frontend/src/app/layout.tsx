@@ -23,15 +23,34 @@ export const metadata: Metadata = {
   other: {
     'mobile-web-app-capable': 'yes',
   },
+  icons: {
+    apple: '/icons/icon.svg',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
-        <link rel="apple-touch-icon" href="/icons/icon.svg" />
+        {/* Workaround for browser extensions (Brownie/Bloom) that cause hydration mismatches */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                const observer = new MutationObserver((mutations) => {
+                  for (const m of mutations) {
+                    if (m.type === 'attributes' && m.attributeName === 'bis_skin_checked') {
+                      m.target.removeAttribute('bis_skin_checked');
+                    }
+                  }
+                });
+                observer.observe(document.documentElement, { attributes: true, subtree: true, attributeFilter: ['bis_skin_checked'] });
+              })();
+            `,
+          }}
+        />
       </head>
-      <body className="h-full bg-gray-50 antialiased">
+      <body className="h-full bg-gray-50 antialiased" suppressHydrationWarning>
         <Providers>{children}</Providers>
         <ServiceWorkerRegistration />
       </body>

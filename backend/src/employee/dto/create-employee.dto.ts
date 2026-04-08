@@ -83,4 +83,14 @@ export class CreateEmployeeDto {
   @Type(() => Number)
   @IsInt()
   shiftId?: number;
+  @ApiPropertyOptional({ example: '@telegram_user' })
+  @IsOptional()
+  @IsString()
+  telegramId?: string;
+
+  @ApiPropertyOptional({ example: 12, default: 12 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  initialLeaveBalance?: number;
 }

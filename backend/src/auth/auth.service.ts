@@ -2,6 +2,8 @@ import {
   Injectable,
   UnauthorizedException,
   BadRequestException,
+  ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,14 +13,17 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
   ) {}
 
   async login(dto: LoginDto) {
+    const email = dto.email.trim().toLowerCase();
     const employee = await this.prisma.employee.findUnique({
-      where: { email: dto.email },
+      where: { email },
       include: {
         branch: { select: { id: true, name: true } },
         department: { select: { id: true, name: true } },
@@ -27,15 +32,18 @@ export class AuthService {
     });
 
     if (!employee || !employee.password) {
+      this.logger.warn(`Login attempt failed: employee not found or no password for ${email}`);
       throw new UnauthorizedException('Invalid credentials');
     }
 
     if (employee.status === 'resigned' || employee.status === 'inactive') {
-      throw new UnauthorizedException('Account is deactivated');
+      this.logger.warn(`Login attempt for deactivated account: ${email}`);
+      throw new ForbiddenException('Account is deactivated');
     }
 
     const isValid = await bcrypt.compare(dto.password, employee.password);
     if (!isValid) {
+      this.logger.warn(`Invalid password for: ${email}`);
       throw new UnauthorizedException('Invalid credentials');
     }
 
