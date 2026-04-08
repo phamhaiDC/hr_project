@@ -91,7 +91,7 @@ export class OrganizationService {
       if (branch.latitude == null || branch.longitude == null) continue;
       const distanceM = Math.round(haversineMetres(lat, lng, branch.latitude, branch.longitude));
       if (!nearest || distanceM < nearest.distanceM) {
-        nearest = { id: branch.id, name: branch.name, distanceM, isInOffice: distanceM <= (branch.radius ?? 50) };
+        nearest = { id: branch.id, name: branch.name ?? 'Unknown', distanceM, isInOffice: distanceM <= (branch.radius ?? 50) };
       }
     }
     return nearest;

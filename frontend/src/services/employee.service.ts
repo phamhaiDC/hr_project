@@ -23,6 +23,8 @@ export interface CreateEmployeePayload {
   managerId?: number;
   status?: string;
   role?: string;
+  telegramId?: string;
+  initialLeaveBalance?: number;
 }
 
 export interface UpdateEmployeePayload {
@@ -35,6 +37,7 @@ export interface UpdateEmployeePayload {
   departmentId?: number;
   positionId?: number;
   managerId?: number;
+  telegramId?: string;
 }
 
 export interface AdminUpdateProfilePayload {

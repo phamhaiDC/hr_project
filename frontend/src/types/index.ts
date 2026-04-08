@@ -106,6 +106,7 @@ export interface Employee {
   updatedAt?: string;
   workingMode?: WorkingMode;
   shiftId?: number | null;
+  telegramId?: string | null;
   branch?: Branch;
   department?: Pick<Department, 'id' | 'name' | 'code' | 'workingType'>;
   position?: Pick<Position, 'id' | 'name' | 'code'>;
@@ -226,7 +227,11 @@ export interface AttendanceRecord {
   checkoutLat?: number;
   checkoutLng?: number;
   officeDistanceM?: number;
+  // Location integration
   isInOffice?: boolean;
+  checkinNote?: string | null;
+  checkoutNote?: string | null;
+  locationNote?: string | null;
   // Leave integration
   isOnLeave?: boolean;
   leaveRequestId?: number | null;
@@ -243,6 +248,7 @@ export interface AttendanceLog {
   locationId?: number;
   deviceId?: string;
   distanceM?: number;
+  note?: string | null;
   attendanceId?: number;
 }
 

@@ -28,6 +28,8 @@ interface FormState {
   managerId: string;
   role: string;
   status: string;
+  telegramId: string;
+  initialLeaveBalance: string;
 }
 
 const INITIAL: FormState = {
@@ -42,6 +44,8 @@ const INITIAL: FormState = {
   managerId: '',
   role: 'employee',
   status: 'probation',
+  telegramId: '',
+  initialLeaveBalance: '12',
 };
 
 function toOptions<T extends { id: number; name?: string | null }>(
@@ -152,6 +156,8 @@ export function CreateEmployeeModal({
         managerId: form.managerId ? Number(form.managerId) : undefined,
         role: form.role,
         status: form.status,
+        telegramId: form.telegramId || undefined,
+        initialLeaveBalance: form.initialLeaveBalance ? Number(form.initialLeaveBalance) : undefined,
       };
       const created = await employeeService.create(payload);
       onSuccess(created);
@@ -238,6 +244,21 @@ export function CreateEmployeeModal({
               onChange={(e) => set('password', e.target.value)}
               error={errors.password}
             />
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Telegram ID (optional)"
+                placeholder="@username or ID"
+                value={form.telegramId}
+                onChange={(e) => set('telegramId', e.target.value)}
+              />
+              <Input
+                label="Initial Leave Balance (Days)"
+                type="number"
+                placeholder="12"
+                value={form.initialLeaveBalance}
+                onChange={(e) => set('initialLeaveBalance', e.target.value)}
+              />
+            </div>
           </fieldset>
 
           <hr className="border-gray-100" />

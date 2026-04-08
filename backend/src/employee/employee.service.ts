@@ -24,6 +24,7 @@ const EMPLOYEE_SELECT = {
   phone: true,
   status: true,
   role: true,
+  telegramId: true,
   branchId: true,
   departmentId: true,
   positionId: true,
@@ -43,7 +44,7 @@ const EMPLOYEE_SELECT = {
 };
 
 /** Fields that trigger an EmployeeHistory entry when changed. */
-const TRACKED_FIELDS = ['departmentId', 'positionId', 'managerId', 'status', 'role', 'workingMode', 'shiftId'] as const;
+const TRACKED_FIELDS = ['departmentId', 'positionId', 'managerId', 'status', 'role', 'workingMode', 'shiftId', 'telegramId'] as const;
 type TrackedField = (typeof TRACKED_FIELDS)[number];
 
 @Injectable()
@@ -136,8 +137,29 @@ export class EmployeeService {
         officeId:     dto.officeId,
         workingMode,
         shiftId:      dto.shiftId,
+        telegramId:   dto.telegramId,
       },
       select: EMPLOYEE_SELECT,
+    });
+
+    // ── Create initial leave balance ──
+    const initialLeave = (dto as any).initialLeaveBalance ?? 12;
+    await this.prisma.leaveBalance.create({
+      data: {
+        employeeId: emp.id,
+        total: initialLeave,
+        used: 0,
+        remaining: initialLeave,
+      },
+    });
+
+    await this.prisma.leaveAccrualLog.create({
+      data: {
+        employeeId: emp.id,
+        days: initialLeave,
+        note: 'Initial balance on creation',
+        accrualDate: new Date(),
+      },
     });
 
     // Record initial shift assignment in history
@@ -244,6 +266,7 @@ export class EmployeeService {
         officeId:     dto.officeId,
         workingMode:  resolvedWorkingMode,
         shiftId:      dto.shiftId,
+        telegramId:   dto.telegramId,
       },
       select: EMPLOYEE_SELECT,
     });
@@ -283,8 +306,41 @@ export class EmployeeService {
       }
     }
 
+    // ── Update initial Leave Balance (admin/hr only) ──
+    if (dto.initialLeaveBalance !== undefined) {
+      const bal = await this.prisma.leaveBalance.findUnique({ where: { employeeId: id } });
+      if (!bal) {
+        await this.prisma.leaveBalance.create({
+          data: {
+            employeeId: id,
+            total: dto.initialLeaveBalance,
+            used: 0,
+            remaining: dto.initialLeaveBalance,
+          },
+        });
+      } else {
+        const used = bal.used ? Number(bal.used) : 0;
+        const newTotal = dto.initialLeaveBalance;
+        const newRemaining = Math.max(newTotal - used, 0);
+        await this.prisma.leaveBalance.update({
+          where: { employeeId: id },
+          data: { total: newTotal, remaining: newRemaining },
+        });
+      }
+      
+      await this.prisma.leaveAccrualLog.create({
+        data: {
+          employeeId: id,
+          days: dto.initialLeaveBalance,
+          note: 'Admin/HR updated initial balance',
+          accrualDate: new Date(),
+        },
+      });
+    }
+
     await this.auditService.log(actorId, 'EMPLOYEE_UPDATED', 'employee', id, {
       changedFields: historyRecords.map((r) => r.field),
+      ...(dto.initialLeaveBalance !== undefined && { updatedInitialLeave: dto.initialLeaveBalance }),
     });
 
     return updated;

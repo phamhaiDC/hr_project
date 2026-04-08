@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { EmployeeModule } from './employee/employee.module';
@@ -15,10 +16,13 @@ import { CalendarModule } from './calendar/calendar.module';
 import { OfficeModule } from './office/office.module';
 import { WorkingShiftModule } from './working-shift/working-shift.module';
 import { MeModule } from './me/me.module';
+import { SystemConfigModule } from './system-config/system-config.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     EmployeeModule,
@@ -34,6 +38,8 @@ import { MeModule } from './me/me.module';
     AuditModule,
     OfficeModule,
     WorkingShiftModule,
+    SystemConfigModule,
+    NotificationModule,
   ],
 })
 export class AppModule {}

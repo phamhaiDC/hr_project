@@ -55,7 +55,13 @@ if (!existsSync(CERT_FILE) || !existsSync(KEY_FILE)) {
 
 // ── Next.js app ──────────────────────────────────────────────────────────────
 
-const app    = next({ dev, hostname: HOSTNAME, port: PORT });
+//const app    = next({ dev, hostname: HOSTNAME, port: PORT });
+const app = next({
+  dev,
+  hostname: HOSTNAME,
+  port: PORT,
+  turbo: false
+});
 const handle = app.getRequestHandler();
 
 await app.prepare();

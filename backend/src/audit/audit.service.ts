@@ -55,7 +55,7 @@ export class AuditService {
       this.prisma.auditLog.findMany({
         where,
         include: {
-          actor: {
+          user: {
             select: {
               id: true,
               fullName: true,

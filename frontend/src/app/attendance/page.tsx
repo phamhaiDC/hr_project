@@ -396,6 +396,7 @@ export default function AttendancePage() {
   // Fallback reason when GPS is unavailable
   const [locationNote, setLocationNote] = useState('');
   const [noteError, setNoteError] = useState('');
+  const [forceReason, setForceReason] = useState(false);
   const noteRef = useRef<HTMLTextAreaElement>(null);
 
   // Branch list (for live GPS preview) + confirmed result from last check-in
@@ -433,9 +434,27 @@ export default function AttendancePage() {
     });
   }, [user]);
 
-  // Textarea is required whenever GPS is not confirmed — covers acquiring, denied, timeout, etc.
-  // This prevents the user from clicking Check In in any non-success GPS state without a reason.
-  const needsReason = geo.status !== 'success';
+  // ─── Calculate distance/status ───
+  let inAssignedOffice = false;
+  if (geo.lat != null && geo.lng != null && employeeOffice) {
+    const dist = haversineMetres(geo.lat, geo.lng, employeeOffice.latitude, employeeOffice.longitude);
+    inAssignedOffice = dist <= employeeOffice.radius;
+  }
+
+  let inAnyBranch = false;
+  if (geo.lat != null && geo.lng != null) {
+    inAnyBranch = branches.some(b => {
+      if (b.latitude == null || b.longitude == null) return false;
+      const dist = haversineMetres(geo.lat!, geo.lng!, b.latitude, b.longitude);
+      return dist <= (b.radius ?? 50);
+    });
+  }
+
+  // User is 'outside' if GPS is logic but they are neither in their assigned office nor any other geofence
+  const isOutside = (geo.lat != null && geo.lng != null) && !inAssignedOffice && !inAnyBranch;
+
+  // Textarea requested whenever GPS failed OR user is outside the authorized geofences
+  const needsReason = geo.status !== 'success' || isOutside || forceReason;
 
   // Auto-focus the textarea only once GPS has definitively failed (not while still acquiring)
   const gpsDefinitelyFailed =
@@ -455,6 +474,7 @@ export default function AttendancePage() {
     if (geo.status === 'success') {
       setLocationNote('');
       setNoteError('');
+      setForceReason(false);
     }
   }, [geo.status]);
 
@@ -519,10 +539,10 @@ export default function AttendancePage() {
       setLocationSource(result.locationSource ?? null);
 
       setLocationNote('');
-      const msg = result.isLate
+      const successMsg = result.isLate
         ? `Checked in at ${formatDateTime(result.attendance.checkinTime)} — marked LATE`
         : `Checked in at ${formatDateTime(result.attendance.checkinTime)} — on time`;
-      setActionMsg({ type: result.isLate ? 'error' : 'success', text: msg });
+      setActionMsg({ type: result.isLate ? 'error' : 'success', text: successMsg });
 
       const fresh = await attendanceService.today();
       setTodayStatus(fresh);
@@ -532,7 +552,12 @@ export default function AttendancePage() {
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         'Check-in failed. Please try again.';
       console.error('[attendance] Check-in failed:', msg);
-      setActionMsg({ type: 'error', text: msg });
+      if (msg.toLowerCase().includes('reason')) {
+        setForceReason(true);
+        setNoteError(msg);
+      } else {
+        setActionMsg({ type: 'error', text: msg });
+      }
     } finally {
       setActionLoading(false);
     }
@@ -541,17 +566,28 @@ export default function AttendancePage() {
   // ── Check-out ──────────────────────────────────────────────────────────────
   async function handleCheckOut() {
     setActionMsg(null);
+
+    if (needsReason && !locationNote.trim()) {
+      setNoteError('Please enter a reason to continue');
+      noteRef.current?.focus();
+      return;
+    }
+    setNoteError('');
+
     setActionLoading(true);
     try {
       const result = await attendanceService.checkOut({
         lat: geo.lat ?? undefined,
         lng: geo.lng ?? undefined,
+        locationNote: needsReason ? locationNote.trim() : undefined,
       });
 
-      let msg = `Checked out · ${Number(result.workingHours).toFixed(1)}h worked`;
-      if (result.isOvertime) msg += ` · OT ${Number(result.overtimeHours).toFixed(1)}h`;
-      if (result.isEarlyOut) msg += ' · Early out';
-      setActionMsg({ type: 'success', text: msg });
+      setLocationNote('');
+
+      let successMsg = `Checked out · ${Number(result.workingHours).toFixed(1)}h worked`;
+      if (result.isOvertime) successMsg += ` · OT ${Number(result.overtimeHours).toFixed(1)}h`;
+      if (result.isEarlyOut) successMsg += ' · Early out';
+      setActionMsg({ type: 'success', text: successMsg });
 
       const fresh = await attendanceService.today();
       setTodayStatus(fresh);
@@ -561,7 +597,12 @@ export default function AttendancePage() {
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         'Check-out failed. Please try again.';
       console.error('[attendance] Check-out failed:', msg);
-      setActionMsg({ type: 'error', text: msg });
+      if (msg.toLowerCase().includes('reason')) {
+        setForceReason(true);
+        setNoteError(msg);
+      } else {
+        setActionMsg({ type: 'error', text: msg });
+      }
     } finally {
       setActionLoading(false);
     }
@@ -670,28 +711,27 @@ export default function AttendancePage() {
                               d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                           </svg>
                           <p className="text-sm font-medium text-amber-800">
-                            {geo.status === 'acquiring'
-                              ? 'Acquiring location… provide a reason if you cannot wait'
-                              : 'Location not available — reason required'}
+                            {isOutside
+                              ? 'Outside authorized location — reason required'
+                              : geo.status === 'acquiring'
+                                ? 'Acquiring position… provide a reason if you cannot wait'
+                                : 'Location not available — reason required'}
                           </p>
                         </div>
 
                         {/* Reason textarea */}
                         <div>
                           <label className="mb-1 block text-xs font-medium text-amber-800">
-                            Reason for check-in without location
+                            Reason for check-in {isOutside ? 'from outside' : 'without location'}
                           </label>
                           <textarea
                             ref={noteRef}
                             value={locationNote}
                             onChange={(e) => { setLocationNote(e.target.value); setNoteError(''); }}
-                            placeholder="e.g. Working from client site, GPS unavailable indoors, poor signal…"
+                            placeholder={isOutside ? "e.g. Meeting at client site, working remotely…" : "e.g. GPS unavailable indoors, poor signal…"}
                             rows={2}
                             className="w-full resize-none rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
                           />
-                          <p className="mt-1 text-xs text-amber-700">
-                            Please provide a reason if location is unavailable
-                          </p>
                         </div>
 
                         {noteError && (
@@ -715,19 +755,53 @@ export default function AttendancePage() {
                     </Button>
                   </div>
                 ) : !checkedOut ? (
-                  <Button
-                    className="w-full min-h-[60px] text-lg font-semibold tracking-wide rounded-2xl shadow-sm active:scale-95 transition-transform"
-                    size="lg"
-                    variant="secondary"
-                    loading={actionLoading}
-                    onClick={handleCheckOut}
-                  >
-                    <svg className="mr-2 h-6 w-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    Check Out
-                  </Button>
+                  <div className="space-y-3">
+                    {/* Location reason for Check Out */}
+                    {needsReason && (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+                        <div className="flex items-start gap-2">
+                          <svg className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                          </svg>
+                          <p className="text-sm font-medium text-amber-800">
+                            {isOutside
+                              ? 'Outside authorized location — reason required'
+                              : 'Location not available — reason required'}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-amber-800">
+                            Reason for check-out
+                          </label>
+                          <textarea
+                            ref={noteRef}
+                            value={locationNote}
+                            onChange={(e) => { setLocationNote(e.target.value); setNoteError(''); }}
+                            placeholder="e.g. Finished meeting at client site, working remotely…"
+                            rows={2}
+                            className="w-full resize-none rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                          />
+                        </div>
+                        {noteError && <p className="text-xs font-medium text-red-600">{noteError}</p>}
+                      </div>
+                    )}
+
+                    <Button
+                      className="w-full min-h-[60px] text-lg font-semibold tracking-wide rounded-2xl shadow-sm active:scale-95 transition-transform"
+                      size="lg"
+                      variant="secondary"
+                      loading={actionLoading}
+                      disabled={needsReason && !locationNote.trim()}
+                      onClick={handleCheckOut}
+                    >
+                      <svg className="mr-2 h-6 w-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      Check Out
+                    </Button>
+                  </div>
                 ) : (
                   <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
                     <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -776,6 +850,7 @@ export default function AttendancePage() {
                       <th className="px-6 py-3 text-left">Check-out</th>
                       <th className="px-6 py-3 text-left">Hours</th>
                       <th className="px-6 py-3 text-left">Status</th>
+                      <th className="px-6 py-3 text-left">Notes</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -807,11 +882,26 @@ export default function AttendancePage() {
                             )}
                           </div>
                         </td>
+                        <td className="px-6 py-3">
+                          <div className="flex flex-col gap-1 text-[10px] text-gray-500 max-w-[200px]">
+                            {rec.checkinNote && (
+                              <div className="bg-gray-50 p-1 rounded">
+                                <span className="font-bold text-gray-400">IN:</span> {rec.checkinNote}
+                              </div>
+                            )}
+                            {rec.checkoutNote && (
+                              <div className="bg-gray-50 p-1 rounded">
+                                <span className="font-bold text-gray-400">OUT:</span> {rec.checkoutNote}
+                              </div>
+                            )}
+                            {!rec.checkinNote && !rec.checkoutNote && <span className="text-gray-300 italic uppercase tracking-widest text-[9px]">None</span>}
+                          </div>
+                        </td>
                       </tr>
                     ))}
                     {myRecords?.data.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="px-6 py-12 text-center text-sm text-gray-400">
+                        <td colSpan={7} className="px-6 py-12 text-center text-sm text-gray-400">
                           No attendance records yet
                         </td>
                       </tr>

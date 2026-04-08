@@ -20,6 +20,12 @@ export interface ReportParams {
   departmentId?: number;
   dateFrom?: string;
   dateTo?: string;
+  q?: string;
+  employeeName?: string;
+  employeeCode?: string;
+  isLate?: boolean;
+  isEarlyOut?: boolean;
+  isOvertime?: boolean;
 }
 
 export interface CheckInPayload {
@@ -35,6 +41,7 @@ export interface CheckOutPayload {
   lng?: number;
   deviceId?: string;
   timestamp?: string;
+  locationNote?: string;
 }
 
 export interface MyRecordsParams {
@@ -102,6 +109,9 @@ export const attendanceService = {
         { params },
       )
       .then((r) => r.data),
+
+  export: (params?: ReportParams) =>
+    api.get('/attendance/report/export', { params, responseType: 'blob' }),
 
   list: (params?: { page?: number; limit?: number; employeeId?: number; date?: string }) =>
     api.get<PaginatedResponse<AttendanceRecord>>('/attendance', { params }).then((r) => r.data),

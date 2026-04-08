@@ -1,0 +1,145 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { AppShell } from '@/components/layout/AppShell';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Alert } from '@/components/ui/Alert';
+import { PageSpinner } from '@/components/ui/Spinner';
+import { systemConfigService, type SystemConfig } from '@/services/system-config.service';
+
+export default function SettingsPage() {
+  const [configs, setConfigs] = useState<SystemConfig[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [localValues, setLocalValues] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    async function fetchConfigs() {
+      try {
+        const data = await systemConfigService.getAll();
+        setConfigs(data);
+        const values: Record<string, string> = {};
+        data.forEach(c => {
+          values[c.key] = c.value;
+        });
+        setLocalValues(values);
+      } catch (err) {
+        setError('Failed to load system settings.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchConfigs();
+  }, []);
+
+  async function handleUpdate(key: string) {
+    setSaving(key);
+    setError('');
+    try {
+      await systemConfigService.update(key, localValues[key]);
+      // Show success briefly? or just relies on button state
+    } catch (err) {
+      setError(`Failed to update ${key}.`);
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  if (loading) return <AppShell title="System Settings"><PageSpinner /></AppShell>;
+
+  const telegramConfigs = configs.filter(c => c.key.startsWith('telegram_'));
+
+  return (
+    <AppShell title="System Settings">
+      <div className="max-w-3xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div>
+          <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+            Notification Settings
+          </h2>
+          <p className="mt-1 text-sm text-gray-500">Configure Telegram reminders for late check-ins.</p>
+        </div>
+
+        {error && <Alert variant="error" message={error} className="glassmorphism-alert" />}
+
+        {/* Telegram Configuration Card */}
+        <div className="overflow-hidden rounded-2xl border border-gray-200/50 bg-white/60 backdrop-blur-xl shadow-lg transition-all hover:shadow-indigo-500/10">
+          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-200">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+              </div>
+              <h3 className="font-semibold text-gray-900">Telegram Bot Integration</h3>
+            </div>
+          </div>
+
+          <div className="divide-y divide-gray-100 p-6 space-y-6">
+            {telegramConfigs.length === 0 && <p className="text-gray-500 text-sm italic">No telegram configurations found in database.</p>}
+            
+            {telegramConfigs.map((c) => (
+              <div key={c.key} className="pt-6 first:pt-0 group">
+                <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+                  <div className="flex-1 space-y-1.5">
+                    <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                      {c.description || c.key.replace(/_/g, ' ').toUpperCase()}
+                      <span className="text-[10px] font-mono text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 uppercase">{c.key}</span>
+                    </label>
+                    {c.key === 'telegram_reminder_message' ? (
+                      <textarea
+                        title={c.description || c.key}
+                        aria-label={c.description || c.key}
+                        placeholder={c.description || c.key}
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-2.5 text-sm transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10"
+                        rows={3}
+                        value={localValues[c.key] || ''}
+                        onChange={(e) => setLocalValues(prev => ({ ...prev, [c.key]: e.target.value }))}
+                      />
+                    ) : (
+                      <Input
+                        title={c.description || c.key}
+                        aria-label={c.description || c.key}
+                        type={c.key === 'telegram_bot_token' ? "password" : "text"}
+                        placeholder={c.key === 'telegram_reminder_time' ? "HH:mm" : ""}
+                        value={localValues[c.key] || ''}
+                        onChange={(e) => setLocalValues(prev => ({ ...prev, [c.key]: e.target.value }))}
+                        className="bg-gray-50/50 transition-all focus:bg-white"
+                      />
+                    )}
+                  </div>
+                  <Button 
+                    variant="primary" 
+                    size="md" 
+                    loading={saving === c.key}
+                    onClick={() => handleUpdate(c.key)}
+                    className="sm:w-24 shadow-sm hover:translate-y-[-1px] active:translate-y-[0px] transition-all"
+                  >
+                    Update
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 flex gap-4">
+          <div className="text-amber-500 mt-1">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-amber-800">Reminder Schedule Note</h4>
+            <p className="mt-1 text-xs text-amber-700 leading-relaxed">
+              The system scans for missing clock-ins every minute. When the server time matches the 
+              set reminder time exactly, a notification will be triggered for all employees who have 
+              a Telegram ID and no check-in record for today.
+            </p>
+          </div>
+        </div>
+      </div>
+    </AppShell>
+  );
+}

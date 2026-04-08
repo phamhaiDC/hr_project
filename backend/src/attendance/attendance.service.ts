@@ -8,6 +8,9 @@ import { CheckOutDto } from './dto/check-out.dto';
 import { ShiftService, hhmmToMinutes } from './shift.service';
 import { LocationService, haversineMetres } from './location.service';
 import { CalendarService } from '../calendar/calendar.service';
+import * as ExcelJS from 'exceljs';
+import { Response } from 'express';
+import { formatDate, formatDateTime } from '../common/utils/format';
 
 const ATTENDANCE_EMPLOYEE_SELECT = {
   id: true,
@@ -16,6 +19,7 @@ const ATTENDANCE_EMPLOYEE_SELECT = {
   email: true,
   department: { select: { id: true, name: true } },
   position: { select: { id: true, name: true } },
+  office: { select: { id: true, name: true } },
 };
 
 @Injectable()
@@ -121,24 +125,72 @@ export class AttendanceService {
 
   // ─── Report ───────────────────────────────────────────────────────────────
 
-  async getReport(dto: ReportAttendanceDto) {
-    const { page = 1, limit = 20, employeeId, departmentId, dateFrom, dateTo } = dto;
+  async getReport(dto: ReportAttendanceDto, user: { id: number; role: string }) {
+    const {
+      page = 1,
+      limit = 20,
+      employeeId,
+      departmentId,
+      dateFrom,
+      dateTo,
+      q,
+      employeeName,
+      employeeCode,
+      isLate,
+      isEarlyOut,
+      isOvertime,
+    } = dto;
     const { skip, take } = paginate(page, limit);
 
-    const where: any = {};
+    const where: any = { AND: [] };
 
-    if (employeeId) where.employeeId = employeeId;
-    if (departmentId) where.employee = { departmentId };
-    if (dateFrom || dateTo) {
-      where.date = {};
-      if (dateFrom) where.date.gte = new Date(dateFrom);
-      if (dateTo) where.date.lte = new Date(dateTo);
+    // 1. RBAC Scoping
+    if (user.role === 'manager') {
+      where.AND.push({
+        OR: [{ employeeId: user.id }, { employee: { managerId: user.id } }],
+      });
+    } else if (user.role === 'employee') {
+      where.AND.push({ employeeId: user.id });
     }
+
+    // 2. Specific filters
+    if (employeeId) where.AND.push({ employeeId });
+    if (departmentId) where.AND.push({ employee: { departmentId } });
+
+    if (dateFrom || dateTo) {
+      const dateFilter: any = {};
+      if (dateFrom) dateFilter.gte = new Date(dateFrom);
+      if (dateTo) dateFilter.lte = new Date(dateTo);
+      where.AND.push({ date: dateFilter });
+    }
+
+    // 3. Search / Column filters
+    if (q) {
+      where.AND.push({
+        OR: [
+          { employee: { fullName: { contains: q, mode: 'insensitive' } } },
+          { employee: { code: { contains: q, mode: 'insensitive' } } },
+        ],
+      });
+    }
+    if (employeeName) {
+      where.AND.push({ employee: { fullName: { contains: employeeName, mode: 'insensitive' } } });
+    }
+    if (employeeCode) {
+      where.AND.push({ employee: { code: { contains: employeeCode, mode: 'insensitive' } } });
+    }
+
+    if (isLate !== undefined) where.AND.push({ isLate });
+    if (isEarlyOut !== undefined) where.AND.push({ isEarlyOut });
+    if (isOvertime !== undefined) where.AND.push({ isOvertime });
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.attendance.findMany({
         where,
-        include: { employee: { select: ATTENDANCE_EMPLOYEE_SELECT } },
+        include: { 
+          employee: { select: ATTENDANCE_EMPLOYEE_SELECT },
+          shift: true
+        },
         skip,
         take,
         orderBy: [{ date: 'desc' }, { employeeId: 'asc' }],
@@ -158,6 +210,66 @@ export class AttendanceService {
         totalWorkingHours: parseFloat(totalWorkingHours.toFixed(2)),
       },
     };
+  }
+
+  async exportReport(dto: ReportAttendanceDto, user: { id: number; role: string }, res: Response) {
+    // 1. Get ALL data (no pagination)
+    const { data } = await this.getReport({ ...dto, page: 1, limit: 10000 }, user);
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Attendance Report');
+
+    worksheet.columns = [
+      { header: 'Employee Code', key: 'code', width: 15 },
+      { header: 'Full Name', key: 'name', width: 25 },
+      { header: 'Date', key: 'date', width: 15 },
+      { header: 'Check-in', key: 'checkin', width: 20 },
+      { header: 'Check-out', key: 'checkout', width: 20 },
+      { header: 'Working Hours', key: 'hours', width: 15 },
+      { header: 'Status', key: 'status', width: 25 },
+      { header: 'In Note', key: 'inNote', width: 25 },
+      { header: 'Out Note', key: 'outNote', width: 25 },
+    ];
+
+    data.forEach((r: any) => {
+      const statusArr: string[] = [];
+      if (r.isLate) statusArr.push('Late');
+      if (r.isEarlyOut) statusArr.push('Early Out');
+      if (r.isOvertime) statusArr.push('Overtime');
+      if (statusArr.length === 0 && r.checkinTime) statusArr.push('Normal');
+
+      worksheet.addRow({
+        code: r.employee?.code,
+        name: r.employee?.fullName,
+        date: formatDate(r.date),
+        checkin: r.checkinTime ? formatDateTime(r.checkinTime) : '-',
+        checkout: r.checkoutTime ? formatDateTime(r.checkoutTime) : '-',
+        hours: r.workingHours ? Number(r.workingHours).toFixed(2) : '0.00',
+        status: statusArr.join(', '),
+        inNote: r.checkinNote || '-',
+        outNote: r.checkoutNote || '-',
+      });
+    });
+
+    // Formatting
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' },
+    };
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=' + `Attendance_Report_${formatDate(new Date())}.xlsx`,
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
   }
 
   // ─── Queries ──────────────────────────────────────────────────────────────
@@ -237,95 +349,86 @@ export class AttendanceService {
     const dateOnly = new Date(Date.UTC(ts.getUTCFullYear(), ts.getUTCMonth(), ts.getUTCDate()));
     const dateStr = dateOnly.toISOString().split('T')[0];
 
-    // Location guard: GPS OR a written reason is required
-    const hasGps = dto.lat != null && dto.lng != null;
-    const hasLocation = hasGps;
-    if (!hasLocation && !dto.locationNote?.trim()) {
-      throw new BadRequestException('Location is required or provide a reason');
-    }
-    const locationNote = hasLocation ? null : (dto.locationNote!.trim());
+    // 1. Core context
+    const emp = await this.prisma.employee.findUnique({
+      where: { id: employeeId },
+      select: {
+        shiftId: true,
+        workingMode: true,
+        office: { select: { latitude: true, longitude: true, radius: true, name: true } },
+      },
+    });
 
-    // Prevent double check-in
-    const existing = await this.prisma.attendance.findFirst({
-      where: { employeeId, date: dateOnly },
+    // 2. Prevent double check-in
+    const existing = await this.prisma.attendance.findUnique({
+      where: { employeeId_date: { employeeId, date: dateOnly } },
     });
     if (existing?.checkinTime) {
       throw new BadRequestException('Already checked in today');
     }
 
-    // Calendar context (non-blocking — employees may work on holidays/weekends)
-    const dayInfo = await this.calendarService.checkDay(dateStr);
-
-    // GPS validation (optional – only enforced when locations exist and GPS provided)
-    let resolvedLocationId: number | undefined;
-    let distanceM: number | undefined;
-
-    if (dto.lat != null && dto.lng != null) {
-      const nearest = await this.locationService.findNearest(dto.lat, dto.lng);
-      if (nearest) {
-        distanceM = nearest.distanceM;
-        if (!nearest.withinRadius) {
-          throw new ForbiddenException(
-            `You are ${nearest.distanceM}m from "${nearest.name}" (allowed radius: check location settings). Move closer to check in.`,
-          );
-        }
-        resolvedLocationId = nearest.locationId;
-      }
-    }
-
-    // Office GPS validation – non-blocking, determines IN_OFFICE / OUTSIDE status
+    // 3. Office GPS validation
+    const hasGps = dto.lat != null && dto.lng != null;
     let officeDistanceM: number | undefined;
     let isInOffice = false;
     let officeStatus: 'IN_OFFICE' | 'OUTSIDE' | null = null;
 
-    if (dto.lat != null && dto.lng != null) {
-      const emp = await this.prisma.employee.findUnique({
-        where: { id: employeeId },
-        select: { office: { select: { latitude: true, longitude: true, radius: true, name: true } } },
-      });
+    if (hasGps && emp?.office) {
+      const { latitude, longitude, radius } = emp.office;
+      const dist = haversineMetres(dto.lat!, dto.lng!, latitude, longitude);
+      officeDistanceM = Math.round(dist);
+      isInOffice = dist <= radius;
+      officeStatus = isInOffice ? 'IN_OFFICE' : 'OUTSIDE';
+    }
 
-      if (emp?.office) {
-        const { latitude, longitude, radius, name } = emp.office;
-        const dist = haversineMetres(dto.lat, dto.lng, latitude, longitude);
-        officeDistanceM = Math.round(dist);
-        isInOffice = dist <= radius;
-        officeStatus = isInOffice ? 'IN_OFFICE' : 'OUTSIDE';
+    // 4. Geofence validation (Check if in ANY authorized work location)
+    let isWithinGeofence = false;
+    let nearestLoc: { name: string; distanceM: number; id: number } | undefined;
+
+    if (hasGps) {
+      const nearest = await this.locationService.findNearest(dto.lat!, dto.lng!);
+      if (nearest) {
+        isWithinGeofence = nearest.withinRadius;
+        nearestLoc = { name: nearest.name, distanceM: nearest.distanceM, id: nearest.locationId };
       }
     }
 
-    // Resolve shift: prefer employee's assigned shift, then time-based detection
-    const empForShift = await this.prisma.employee.findUnique({
-      where:  { id: employeeId },
-      select: { shiftId: true, workingMode: true },
-    });
-
-    let shift: Awaited<ReturnType<ShiftService['detectShift']>> = null;
-
-    if (empForShift?.shiftId) {
-      shift = await this.prisma.shift.findUnique({ where: { id: empForShift.shiftId } }) ?? null;
-    } else if (!empForShift?.workingMode || empForShift.workingMode === 'FIXED') {
-      // FIXED employees always get the global default shift
-      shift = await this.shiftService.findDefault();
-    } else {
-      // SHIFT employee without an assigned shift: fall back to time-based
-      shift = await this.shiftService.detectShift(ts);
+    // 5. Location guard: MUST be in office OR in a geofence OR provide a reason
+    const locationNote = dto.locationNote?.trim();
+    if (!isInOffice && !isWithinGeofence && !locationNote) {
+      if (!hasGps) {
+        throw new BadRequestException('GPS location is required or provide a reason (Working from client, etc.)');
+      }
+      const officeName = emp?.office?.name || 'an authorized office';
+      throw new BadRequestException(`You are outside "${officeName}". Please provide a reason to clock in.`);
     }
 
+    let resolvedLocationId = nearestLoc?.id;
+    let distanceM = nearestLoc?.distanceM;
+
+    const dayInfo = await this.calendarService.checkDay(dateStr);
+
+    // 6. Resolve shift
+    let shift: Awaited<ReturnType<ShiftService['detectShift']>> = null;
+    if (emp?.shiftId) {
+      shift = await this.prisma.shift.findUnique({ where: { id: emp.shiftId } }) ?? null;
+    } else if (!emp?.workingMode || emp.workingMode === 'FIXED') {
+      shift = await this.shiftService.findDefault();
+    } else {
+      shift = await this.shiftService.detectShift(ts);
+    }
     const shiftId = shift?.id ?? undefined;
 
-    // Determine if late (cross-day aware)
+    // 7. Determine late
     let isLate = false;
     if (shift) {
       const checkinMin = ts.getHours() * 60 + ts.getMinutes();
       const startMin   = hhmmToMinutes(shift.startTime);
-      // For cross-day shifts, normalize early-morning check-ins to next-day minutes
-      const normalMin  = shift.isCrossDay && checkinMin < startMin
-        ? checkinMin + 1440
-        : checkinMin;
+      const normalMin  = shift.isCrossDay && checkinMin < startMin ? checkinMin + 1440 : checkinMin;
       isLate = normalMin > startMin + shift.graceLateMinutes;
     }
 
-    // Upsert attendance row
+    // 8. Upsert attendance row
     const attendance = existing
       ? await this.prisma.attendance.update({
           where: { id: existing.id },
@@ -337,8 +440,9 @@ export class AttendanceService {
             checkinLng: dto.lng,
             officeDistanceM,
             isInOffice,
-            hasLocation,
-            locationNote,
+            hasLocation: hasGps,
+            checkinNote: locationNote,
+            locationNote, // for backward compatibility
           },
         })
       : await this.prisma.attendance.create({
@@ -352,12 +456,13 @@ export class AttendanceService {
             checkinLng: dto.lng,
             officeDistanceM,
             isInOffice,
-            hasLocation,
-            locationNote,
+            hasLocation: hasGps,
+            checkinNote: locationNote,
+            locationNote, // for backward compatibility
           },
         });
 
-    // Write audit log entry
+    // 9. Write audit log entry
     await this.prisma.attendanceLog.create({
       data: {
         employeeId,
@@ -368,32 +473,26 @@ export class AttendanceService {
         locationId: resolvedLocationId,
         deviceId: dto.deviceId,
         distanceM,
+        note: locationNote,
         attendanceId: attendance.id,
       },
     });
 
-    // Branch GPS detection — finds nearest GPS-enabled branch (non-blocking)
-    let nearestBranch: {
-      id: number;
-      name: string;
-      distanceM: number;
-      isInOffice: boolean;
-    } | null = null;
-
-    if (dto.lat != null && dto.lng != null) {
+    // 10. Branch GPS detection
+    let nearestBranch: { id: number; name: string; distanceM: number; isInOffice: boolean; } | null = null;
+    if (hasGps) {
       const branches = await this.prisma.branch.findMany({
         where: { latitude: { not: null }, longitude: { not: null } },
         select: { id: true, name: true, latitude: true, longitude: true, radius: true },
       });
-
       for (const branch of branches) {
         if (branch.latitude == null || branch.longitude == null) continue;
-        const dist = Math.round(haversineMetres(dto.lat, dto.lng, branch.latitude, branch.longitude));
+        const dist = Math.round(haversineMetres(dto.lat!, dto.lng!, branch.latitude, branch.longitude));
         if (!nearestBranch || dist < nearestBranch.distanceM) {
           nearestBranch = {
-            id:         branch.id,
-            name:       branch.name,
-            distanceM:  dist,
+            id: branch.id,
+            name: branch.name ?? 'Unknown',
+            distanceM: dist,
             isInOffice: dist <= (branch.radius ?? 50),
           };
         }
@@ -430,18 +529,43 @@ export class AttendanceService {
       throw new BadRequestException('Already checked out today');
     }
 
-    // GPS validation
-    let resolvedLocationId: number | undefined;
-    let distanceM: number | undefined;
+    // 1. Office GPS validation
+    const hasGps = dto.lat != null && dto.lng != null;
+    let isInOffice = false;
+    let officeName = 'office';
 
-    if (dto.lat != null && dto.lng != null) {
-      const nearest = await this.locationService.findNearest(dto.lat, dto.lng);
-      if (nearest) {
-        distanceM = nearest.distanceM;
-        // Allow check-out even outside radius (employee may have left the building)
-        resolvedLocationId = nearest.locationId;
+    if (hasGps) {
+      const emp = await this.prisma.employee.findUnique({
+        where: { id: employeeId },
+        select: { office: { select: { latitude: true, longitude: true, radius: true, name: true } } },
+      });
+      if (emp?.office) {
+        officeName = emp.office.name;
+        const dist = haversineMetres(dto.lat!, dto.lng!, emp.office.latitude, emp.office.longitude);
+        isInOffice = dist <= emp.office.radius;
       }
     }
+
+    // 2. Geofence validation
+    let isWithinGeofence = false;
+    let nearestLoc: { name: string; distanceM: number; id: number } | undefined;
+
+    if (hasGps) {
+      const nearest = await this.locationService.findNearest(dto.lat!, dto.lng!);
+      if (nearest) {
+        isWithinGeofence = nearest.withinRadius;
+        nearestLoc = { name: nearest.name, distanceM: nearest.distanceM, id: nearest.locationId };
+      }
+    }
+
+    // 3. Choice: Office OR Geofence OR Reason
+    const locationNote = dto.locationNote?.trim();
+    if (!isInOffice && !isWithinGeofence && !locationNote) {
+      throw new BadRequestException(`You are outside "${officeName}". Please provide a reason to clock out.`);
+    }
+
+    let resolvedLocationId = nearestLoc?.id;
+    let distanceM = nearestLoc?.distanceM;
 
     // Calculate working hours
     const diffMs = ts.getTime() - attendance.checkinTime.getTime();
@@ -456,13 +580,12 @@ export class AttendanceService {
       const s = attendance.shift;
       const startMin = hhmmToMinutes(s.startTime);
       let endMin = hhmmToMinutes(s.endTime);
-      // Normalize end time for cross-day shifts (e.g. 07:00 → 07:00+1440 = 1860)
+      // Normalize end time for cross-day shifts
       if (s.isCrossDay && endMin <= startMin) endMin += 1440;
 
       const normalHours = (endMin - startMin - s.breakMinutes) / 60;
       const graceEarlyH  = s.graceEarlyMinutes / 60;
 
-      // Use actual working hours (derived from timestamps) for all comparisons
       isEarlyOut = workingHours < normalHours - graceEarlyH;
       isOvertime = workingHours > normalHours;
       if (isOvertime) {
@@ -480,6 +603,7 @@ export class AttendanceService {
         overtimeHours,
         checkoutLat: dto.lat,
         checkoutLng: dto.lng,
+        checkoutNote: locationNote,
       },
     });
 
@@ -493,6 +617,7 @@ export class AttendanceService {
         locationId: resolvedLocationId,
         deviceId: dto.deviceId,
         distanceM,
+        note: locationNote,
         attendanceId: attendance.id,
       },
     });

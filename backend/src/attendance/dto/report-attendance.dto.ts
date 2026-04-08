@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsInt, IsDateString } from 'class-validator';
+import { IsOptional, IsInt, IsDateString, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 
@@ -25,4 +25,34 @@ export class ReportAttendanceDto extends PaginationDto {
   @IsOptional()
   @IsDateString()
   dateTo?: string;
+
+  @ApiPropertyOptional({ description: 'Search name or code' })
+  @IsOptional()
+  @IsString()
+  q?: string;
+
+  @ApiPropertyOptional({ description: 'Search employee name' })
+  @IsOptional()
+  @IsString()
+  employeeName?: string;
+
+  @ApiPropertyOptional({ description: 'Search employee code' })
+  @IsOptional()
+  @IsString()
+  employeeCode?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by late status' })
+  @IsOptional()
+  @Type(() => Boolean)
+  isLate?: boolean;
+
+  @ApiPropertyOptional({ description: 'Filter by early out status' })
+  @IsOptional()
+  @Type(() => Boolean)
+  isEarlyOut?: boolean;
+
+  @ApiPropertyOptional({ description: 'Filter by overtime status' })
+  @IsOptional()
+  @Type(() => Boolean)
+  isOvertime?: boolean;
 }
