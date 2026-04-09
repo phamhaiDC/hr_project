@@ -25,7 +25,11 @@ export default function LoginPage() {
   const [password,   setPassword]   = useState('');
   const [error,      setError]      = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   // Redirect already-authenticated users (e.g. back-navigated to /login).
   // Guarded against `submitting` so this never races with handleSubmit's
   // direct router.replace() call in React 19 concurrent mode.
@@ -73,7 +77,7 @@ export default function LoginPage() {
       setSubmitting(false);
     }
   }
-
+  if (!mounted) return null;
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-50 to-white px-4">
       <div className="w-full max-w-md">
