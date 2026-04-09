@@ -21,23 +21,23 @@ const DEV_DOMAINS = ['hr.dcorp.com.vn'];
 
 const nextConfig: NextConfig = {
   /**
-   * ⚠️ Next.js 16: KHÔNG còn experimental.turbo
-   * → Không config ở đây nữa
+   * Force Webpack — Turbopack requires `popcnt` CPU instruction unavailable
+   * on Windows Server 2012. The webpack callback must be present; Next.js 16
+   * uses its existence as a signal to skip Turbopack initialisation.
    */
+  webpack: (config) => config,
 
   /**
-   * Force Webpack (giữ để tránh Turbopack fallback)
-   */
-  webpack: (config) => {
-    return config;
-  },
-
-  /**
-   * Allow LAN + custom domain
+   * Allow requests from LAN IPs and the custom domain on BOTH ports
+   * (3000 HTTP + 3443 HTTPS). Missing port variants cause Next.js to
+   * reject cross-origin dev requests with an empty response.
    */
   allowedDevOrigins: [
-    ...lanIPs.flatMap((ip) => [`${ip}:3000`, ip]),
-    ...DEV_DOMAINS.flatMap((d) => [`${d}:3000`, d]),
+    'localhost',
+    'localhost:3000',
+    'localhost:3443',
+    ...lanIPs.flatMap((ip) => [ip, `${ip}:3000`, `${ip}:3443`]),
+    ...DEV_DOMAINS.flatMap((d) => [d, `${d}:3000`, `${d}:3443`]),
   ],
 
   /**
