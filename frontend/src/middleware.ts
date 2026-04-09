@@ -37,8 +37,11 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Run on all routes except Next.js internals, static assets, and API proxy routes
+  // Run on all routes except Next.js internals, static assets, and API proxy routes.
+  // PWA files (sw.js, manifest.json, offline.html, icons/) must be public so the
+  // browser can fetch them before the user is authenticated — a redirect on sw.js
+  // causes "script resource is behind a redirect" and kills SW registration.
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api/).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|sw\\.js|manifest\\.json|offline\\.html|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api/).*)',
   ],
 };
