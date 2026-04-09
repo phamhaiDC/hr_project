@@ -33,7 +33,6 @@ export class CalendarService {
   listYears() {
     return this.prisma.calendarYear.findMany({
       orderBy: { year: 'desc' },
-      include: { _count: { select: { days: true } } },
     });
   }
 

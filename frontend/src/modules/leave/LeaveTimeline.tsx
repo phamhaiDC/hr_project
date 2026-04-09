@@ -1,11 +1,9 @@
+'use client';
+
+import { useTranslation } from 'react-i18next';
 import { statusBadge } from '@/components/ui/Badge';
 import { formatDateTime } from '@/utils/format';
 import type { LeaveApproval } from '@/types';
-
-const STEP_META: Record<number, { role: string; label: string }> = {
-  1: { role: 'manager', label: 'Manager Review' },
-  2: { role: 'hr', label: 'HR Review' },
-};
 
 interface LeaveTimelineProps {
   approvals?: LeaveApproval[];
@@ -13,7 +11,13 @@ interface LeaveTimelineProps {
 }
 
 export function LeaveTimeline({ approvals = [], currentStep }: LeaveTimelineProps) {
+  const { t } = useTranslation();
   const steps = [1, 2];
+
+  const STEP_META: Record<number, { role: string; label: string }> = {
+    1: { role: 'manager', label: t('leave.managerReview') },
+    2: { role: 'hr',      label: t('leave.hrReview') },
+  };
 
   function getApproval(step: number): LeaveApproval | undefined {
     return approvals.find((a) => a.step === step);
@@ -31,8 +35,8 @@ export function LeaveTimeline({ approvals = [], currentStep }: LeaveTimelineProp
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
       <div className="border-b border-gray-100 px-6 py-4">
-        <h3 className="text-sm font-semibold text-gray-700">Approval Timeline</h3>
-        <p className="mt-0.5 text-xs text-gray-400">Two-step approval: manager then HR</p>
+        <h3 className="text-sm font-semibold text-gray-700">{t('leave.approvalTimeline')}</h3>
+        <p className="mt-0.5 text-xs text-gray-400">{t('leave.twoStepApproval')}</p>
       </div>
 
       <div className="px-6 py-5">
@@ -59,7 +63,7 @@ export function LeaveTimeline({ approvals = [], currentStep }: LeaveTimelineProp
                 <div className={`flex-1 pb-8 ${isLast ? 'pb-0' : ''}`}>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-medium text-gray-800">
-                      Step {step} — {meta.label}
+                      {t('common.step')} {step} — {meta.label}
                     </span>
                     <span className="text-xs text-gray-400 capitalize">({meta.role})</span>
                     {statusBadge(status === 'waiting' ? 'pending' : status)}
@@ -69,7 +73,7 @@ export function LeaveTimeline({ approvals = [], currentStep }: LeaveTimelineProp
                     <div className="mt-2 rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 space-y-1">
                       {approval.actionTime && (
                         <p className="text-xs text-gray-500">
-                          {status === 'approved' ? 'Approved' : 'Rejected'} on{' '}
+                          {status === 'approved' ? t('leave.approvedOn') : t('leave.rejectedOn')}{' '}
                           <span className="font-medium text-gray-700">
                             {formatDateTime(approval.actionTime)}
                           </span>
@@ -77,15 +81,15 @@ export function LeaveTimeline({ approvals = [], currentStep }: LeaveTimelineProp
                       )}
                       {approval.comments && (
                         <p className="text-xs text-gray-600">
-                          <span className="font-medium">Comment:</span> {approval.comments}
+                          <span className="font-medium">{t('leave.comment')}</span> {approval.comments}
                         </p>
                       )}
                     </div>
                   ) : (
                     <p className="mt-1 text-xs text-gray-400">
                       {status === 'pending'
-                        ? 'Awaiting action…'
-                        : 'Not yet reached'}
+                        ? t('leave.awaitingAction')
+                        : t('leave.notYetReached')}
                     </p>
                   )}
                 </div>

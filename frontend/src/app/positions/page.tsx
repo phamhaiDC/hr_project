@@ -9,6 +9,7 @@ import { Alert } from '@/components/ui/Alert';
 import { Modal } from '@/components/ui/Modal';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { useAuth } from '@/hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import { organizationService } from '@/services/organization.service';
 import type { Department, Position } from '@/types';
 
@@ -41,6 +42,7 @@ const INITIAL_FORM: FormState = {
 };
 
 function PositionModal({ open, onClose, position, departments, onSuccess }: PositionModalProps) {
+  const { t } = useTranslation();
   const isEdit = position !== null;
 
   const [form, setForm]       = useState<FormState>(INITIAL_FORM);
@@ -67,11 +69,9 @@ function PositionModal({ open, onClose, position, departments, onSuccess }: Posi
 
   function validate(): boolean {
     const errs: FormErrors = {};
-    if (!form.name.trim())         errs.name         = 'Position name is required';
-    if (!form.code.trim())         errs.code         = 'Code is required';
-    else if (!/^[A-Z0-9_-]+$/.test(form.code))
-      errs.code = 'Code must be uppercase letters, digits, underscores or hyphens';
-    if (!form.departmentId)        errs.departmentId = 'Department is required';
+    if (!form.name.trim())         errs.name         = t('validation.nameRequired');
+    if (!form.code.trim())         errs.code         = t('validation.codeRequired');
+    if (!form.departmentId)        errs.departmentId = t('validation.departmentRequired');
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -98,7 +98,7 @@ function PositionModal({ open, onClose, position, departments, onSuccess }: Posi
       onClose();
     } catch (err: any) {
       const msg = err?.response?.data?.message;
-      setApiError(Array.isArray(msg) ? msg[0] : (msg ?? 'An error occurred'));
+      setApiError(Array.isArray(msg) ? msg[0] : (msg ?? t('position.failedToSave')));
     } finally {
       setSaving(false);
     }
@@ -111,15 +111,15 @@ function PositionModal({ open, onClose, position, departments, onSuccess }: Posi
   const selectedDept = departments.find((d) => String(d.id) === form.departmentId);
 
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? 'Edit Position' : 'Add Position'}>
+    <Modal open={open} onClose={onClose} title={isEdit ? t('position.edit') : t('position.add')}>
       <form onSubmit={handleSubmit} className="space-y-4">
         {apiError && <Alert variant="error" message={apiError} />}
 
         <Select
-          label="Department *"
+          label={`${t('common.department')} *`}
           value={form.departmentId}
           onChange={(e) => set('departmentId', e.target.value)}
-          placeholder="— Select department —"
+          placeholder={t('position.selectDepartment')}
           error={errors.departmentId}
           options={departments.map((d) => ({
             value: d.id,
@@ -137,30 +137,30 @@ function PositionModal({ open, onClose, position, departments, onSuccess }: Posi
             }`}
           >
             {selectedDept.workingType === 'SHIFT'
-              ? '⏰  Employees in this position will work on a rotating SHIFT schedule (Morning / Afternoon / Night).'
-              : '🕗  Employees in this position follow a FIXED schedule (08:00 – 18:00).'}
+              ? t('position.shiftNote')
+              : t('position.fixedNote')}
           </div>
         )}
 
         <Input
-          label="Position Name *"
-          placeholder="e.g. Network Operations Engineer"
+          label={t('position.nameLabel')}
+          placeholder={t('position.namePlaceholder')}
           value={form.name}
           onChange={(e) => set('name', e.target.value)}
           error={errors.name}
         />
 
         <Input
-          label="Code *"
-          placeholder="e.g. NOC"
+          label={`${t('common.code')} *`}
+          placeholder={t('position.codePlaceholder')}
           value={form.code}
           onChange={(e) => set('code', e.target.value.toUpperCase())}
           error={errors.code}
         />
 
         <Input
-          label="Description"
-          placeholder="Optional description"
+          label={t('common.description')}
+          placeholder={t('position.descriptionPlaceholder')}
           value={form.description}
           onChange={(e) => set('description', e.target.value)}
         />
@@ -172,13 +172,13 @@ function PositionModal({ open, onClose, position, departments, onSuccess }: Posi
             onChange={(e) => set('isActive', e.target.checked)}
             className="h-4 w-4 rounded border-gray-300 text-indigo-600"
           />
-          Active
+          {t('position.active')}
         </label>
 
         <div className="flex justify-end gap-3 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="secondary" onClick={onClose}>{t('common.cancel')}</Button>
           <Button type="submit" loading={saving}>
-            {isEdit ? 'Save Changes' : 'Create Position'}
+            {isEdit ? t('common.saveChanges') : t('position.add')}
           </Button>
         </div>
       </form>
@@ -196,6 +196,7 @@ interface DeleteModalProps {
 }
 
 function DeleteModal({ open, onClose, position, onSuccess }: DeleteModalProps) {
+  const { t } = useTranslation();
   const [deleting, setDeleting] = useState(false);
   const [error, setError]       = useState('');
 
@@ -211,27 +212,26 @@ function DeleteModal({ open, onClose, position, onSuccess }: DeleteModalProps) {
       onClose();
     } catch (err: any) {
       const msg = err?.response?.data?.message;
-      setError(Array.isArray(msg) ? msg[0] : (msg ?? 'Delete failed'));
+      setError(Array.isArray(msg) ? msg[0] : (msg ?? t('position.failedToDelete')));
     } finally {
       setDeleting(false);
     }
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Delete Position">
+    <Modal open={open} onClose={onClose} title={t('position.delete')}>
       <div className="space-y-4">
         {error && <Alert variant="error" message={error} />}
         <p className="text-sm text-gray-600">
-          Delete position{' '}
-          <span className="font-semibold text-gray-900">{position?.name}</span>?
+          {t('position.deleteConfirm', { name: position?.name ?? '' })}
         </p>
         <p className="text-xs text-gray-500">
-          This is blocked if any employees are currently assigned to this position.
+          {t('position.deleteBlocked')}
         </p>
         <div className="flex justify-end gap-3">
-          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="secondary" onClick={onClose}>{t('common.cancel')}</Button>
           <Button type="button" variant="danger" loading={deleting} onClick={handleDelete}>
-            Delete
+            {t('common.delete')}
           </Button>
         </div>
       </div>
@@ -242,6 +242,7 @@ function DeleteModal({ open, onClose, position, onSuccess }: DeleteModalProps) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PositionsPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const canEdit  = user?.role === 'admin' || user?.role === 'hr';
 
@@ -268,11 +269,11 @@ export default function PositionsPage() {
       setPositions(pos);
       setDepartments(depts);
     } catch {
-      setError('Failed to load positions');
+      setError(t('position.failedToSave'));
     } finally {
       setLoading(false);
     }
-  }, [deptFilter]);
+  }, [deptFilter, t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -280,18 +281,18 @@ export default function PositionsPage() {
   function openEdit(p: Position) { setSelected(p); setModalOpen(true); }
   function openDelete(p: Position) { setSelected(p); setDeleteOpen(true); }
 
-  if (loading) return <AppShell title="Positions"><PageSpinner /></AppShell>;
+  if (loading) return <AppShell title={t('position.title')}><PageSpinner /></AppShell>;
 
   return (
-    <AppShell title="Positions">
+    <AppShell title={t('position.title')}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Positions</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t('position.title')}</h1>
             <p className="text-sm text-gray-500">
-              {positions.length} position{positions.length !== 1 && 's'}
-              {deptFilter && ' in selected department'}
+              {positions.length} {t('position.count')}
+              {deptFilter && ` ${t('position.inDepartment')}`}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -301,7 +302,7 @@ export default function PositionsPage() {
               onChange={(e) => setDeptFilter(e.target.value)}
               className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-500 focus:outline-none"
             >
-              <option value="">All departments</option>
+              <option value="">{t('position.allDepartments')}</option>
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name} ({d.code})
@@ -309,7 +310,7 @@ export default function PositionsPage() {
               ))}
             </select>
             {canEdit && (
-              <Button onClick={openCreate}>+ Add Position</Button>
+              <Button onClick={openCreate}>{t('position.add')}</Button>
             )}
           </div>
         </div>
@@ -319,9 +320,9 @@ export default function PositionsPage() {
         {/* Table */}
         {positions.length === 0 ? (
           <div className="rounded-xl border border-dashed border-gray-300 py-16 text-center">
-            <p className="text-gray-500">No positions found.</p>
+            <p className="text-gray-500">{t('position.noData')}</p>
             {canEdit && (
-              <Button className="mt-4" onClick={openCreate}>Create a position</Button>
+              <Button className="mt-4" onClick={openCreate}>{t('position.createFirst')}</Button>
             )}
           </div>
         ) : (
@@ -329,13 +330,13 @@ export default function PositionsPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
-                  <th className="px-5 py-3 text-left">Name</th>
-                  <th className="px-5 py-3 text-left">Code</th>
-                  <th className="px-5 py-3 text-left">Department</th>
-                  <th className="px-5 py-3 text-left">Working Type</th>
-                  <th className="px-5 py-3 text-right">Employees</th>
-                  <th className="px-5 py-3 text-center">Status</th>
-                  {canEdit && <th className="px-5 py-3 text-right">Actions</th>}
+                  <th className="px-5 py-3 text-left">{t('common.name')}</th>
+                  <th className="px-5 py-3 text-left">{t('common.code')}</th>
+                  <th className="px-5 py-3 text-left">{t('common.department')}</th>
+                  <th className="px-5 py-3 text-left">{t('department.colWorkingType')}</th>
+                  <th className="px-5 py-3 text-right">{t('department.colEmployees')}</th>
+                  <th className="px-5 py-3 text-center">{t('department.colStatus')}</th>
+                  {canEdit && <th className="px-5 py-3 text-right">{t('common.actions')}</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -379,11 +380,11 @@ export default function PositionsPage() {
                     <td className="px-5 py-3 text-center">
                       {pos.isActive ? (
                         <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                          Active
+                          {t('common.active')}
                         </span>
                       ) : (
                         <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">
-                          Inactive
+                          {t('common.inactive')}
                         </span>
                       )}
                     </td>
@@ -394,7 +395,7 @@ export default function PositionsPage() {
                             onClick={() => openEdit(pos)}
                             className="rounded px-2.5 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50"
                           >
-                            Edit
+                            {t('common.edit')}
                           </button>
                           <button
                             onClick={() => openDelete(pos)}
@@ -402,11 +403,11 @@ export default function PositionsPage() {
                             disabled={(pos._count?.employees ?? 0) > 0}
                             title={
                               (pos._count?.employees ?? 0) > 0
-                                ? 'Cannot delete — employees assigned'
-                                : 'Delete position'
+                                ? t('position.cannotDeleteEmployees')
+                                : t('position.delete')
                             }
                           >
-                            Delete
+                            {t('common.delete')}
                           </button>
                         </div>
                       </td>

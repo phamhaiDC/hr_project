@@ -17,6 +17,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { CreateLeaveModal } from '@/modules/leave/CreateLeaveModal';
 import { RejectModal } from '@/modules/leave/RejectModal';
 import { PendingApprovals } from '@/modules/leave/PendingApprovals';
+import { useTranslation } from 'react-i18next';
 import type {
   LeaveRequest,
   PaginatedResponse,
@@ -36,6 +37,7 @@ function extractError(err: unknown, fallback: string): string {
 // ─── Balance card ─────────────────────────────────────────────────────────────
 
 function BalanceCard({ balance }: { balance: LeaveBalance }) {
+  const { t } = useTranslation();
   const total = Number(balance.total);
   const used = Number(balance.used);
   const remaining = Number(balance.remaining);
@@ -45,12 +47,12 @@ function BalanceCard({ balance }: { balance: LeaveBalance }) {
     <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between mb-3">
         <div>
-          <h3 className="text-sm font-medium text-gray-500">Leave Balance</h3>
-          <p className="text-3xl font-bold text-gray-900 mt-0.5">{remaining} <span className="text-base font-normal text-gray-500">days remaining</span></p>
+          <h3 className="text-sm font-medium text-gray-500">{t('leave.leaveBalance')}</h3>
+          <p className="text-3xl font-bold text-gray-900 mt-0.5">{remaining} <span className="text-base font-normal text-gray-500">{t('leave.daysRemaining')}</span></p>
         </div>
         <div className="text-right text-sm text-gray-400">
-          <p>{used} used</p>
-          <p>{total} total</p>
+          <p>{used} {t('leave.daysUsed')}</p>
+          <p>{total} {t('leave.daysTotal')}</p>
         </div>
       </div>
       {/* Progress bar */}
@@ -60,7 +62,7 @@ function BalanceCard({ balance }: { balance: LeaveBalance }) {
           style={{ width: `${pct}%` }}
         />
       </div>
-      <p className="mt-1.5 text-xs text-gray-400">{pct}% used</p>
+      <p className="mt-1.5 text-xs text-gray-400">{pct}{t('leave.pctUsed')}</p>
     </div>
   );
 }
@@ -68,6 +70,7 @@ function BalanceCard({ balance }: { balance: LeaveBalance }) {
 // ─── Accrual log ──────────────────────────────────────────────────────────────
 
 function AccrualLog({ logs }: { logs: LeaveAccrualLog[] }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const shown = expanded ? logs : logs.slice(0, 5);
 
@@ -75,12 +78,12 @@ function AccrualLog({ logs }: { logs: LeaveAccrualLog[] }) {
 
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-      <h3 className="text-sm font-semibold text-gray-700 mb-3">Accrual History</h3>
+      <h3 className="text-sm font-semibold text-gray-700 mb-3">{t('leave.accrualHistory')}</h3>
       <div className="divide-y divide-gray-50">
         {shown.map((log) => (
           <div key={log.id} className="flex items-center justify-between py-2.5 text-sm">
             <div>
-              <span className="text-gray-700">{log.note ?? 'Accrual'}</span>
+              <span className="text-gray-700">{log.note ?? t('leave.accrual')}</span>
               <span className="ml-2 text-xs text-gray-400">{formatDate(log.accrualDate)}</span>
             </div>
             <span className={['font-semibold tabular-nums', Number(log.days) >= 0 ? 'text-emerald-600' : 'text-red-500'].join(' ')}>
@@ -94,7 +97,7 @@ function AccrualLog({ logs }: { logs: LeaveAccrualLog[] }) {
           onClick={() => setExpanded((v) => !v)}
           className="mt-2 text-xs text-indigo-600 hover:underline"
         >
-          {expanded ? 'Show less' : `Show all ${logs.length} entries`}
+          {expanded ? t('leave.showLess') : t('leave.showAll', { n: logs.length })}
         </button>
       )}
     </div>
@@ -108,6 +111,7 @@ interface AdminBalanceRow extends LeaveBalance {
 }
 
 function AdminBalancePanel() {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<AdminBalanceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -140,7 +144,7 @@ function AdminBalancePanel() {
     setAccrueMsg('');
     try {
       const res = await leaveService.accrue({ daysPerEmployee: 1.0, note: `Manual accrual — ${new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}` });
-      setAccrueMsg(`Accrued 1 day for ${res.processed} employee(s).`);
+      setAccrueMsg(t('leave.accrualSuccess', { n: res.processed }));
       await load();
     } catch (err) {
       setAccrueMsg(extractError(err, 'Accrual failed'));
@@ -159,7 +163,7 @@ function AdminBalancePanel() {
   async function saveEdit() {
     if (!editRow) return;
     const total = parseFloat(editTotal);
-    if (isNaN(total) || total < 0) { setSaveError('Enter a valid number ≥ 0'); return; }
+    if (isNaN(total) || total < 0) { setSaveError(t('validation.validNumberRequired')); return; }
     setSaving(true);
     setSaveError('');
     try {
@@ -176,11 +180,11 @@ function AdminBalancePanel() {
   return (
     <div className="rounded-2xl border border-gray-100 bg-white shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-6 py-4">
-        <h3 className="text-base font-semibold text-gray-800">Employee Leave Balances</h3>
+        <h3 className="text-base font-semibold text-gray-800">{t('leave.adminBalances')}</h3>
         <div className="flex items-center gap-2">
           {accrueMsg && <span className="text-sm text-emerald-600">{accrueMsg}</span>}
           <Button size="sm" variant="secondary" loading={accruing} onClick={runAccrual}>
-            Run Monthly Accrual
+            {t('leave.runAccrual')}
           </Button>
         </div>
       </div>
@@ -194,11 +198,11 @@ function AdminBalancePanel() {
           <table className="w-full text-sm">
             <thead className="border-b border-gray-100 bg-gray-50 text-xs font-medium uppercase tracking-wide text-gray-500">
               <tr>
-                <th className="px-6 py-3 text-left">Employee</th>
-                <th className="px-6 py-3 text-center">Total</th>
-                <th className="px-6 py-3 text-center">Used</th>
-                <th className="px-6 py-3 text-center">Remaining</th>
-                <th className="px-6 py-3 text-left">Usage</th>
+                <th className="px-6 py-3 text-left">{t('leave.colEmployee')}</th>
+                <th className="px-6 py-3 text-center">{t('leave.colTotal')}</th>
+                <th className="px-6 py-3 text-center">{t('leave.colUsed')}</th>
+                <th className="px-6 py-3 text-center">{t('leave.colRemaining')}</th>
+                <th className="px-6 py-3 text-left">{t('leave.colUsage')}</th>
                 <th className="px-6 py-3" />
               </tr>
             </thead>
@@ -228,7 +232,7 @@ function AdminBalancePanel() {
                     </td>
                     <td className="px-6 py-3 text-right">
                       <button onClick={() => openEdit(row)} className="text-xs text-indigo-600 hover:underline">
-                        Set Balance
+                        {t('leave.setBalance')}
                       </button>
                     </td>
                   </tr>
@@ -237,7 +241,7 @@ function AdminBalancePanel() {
               {rows.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-400">
-                    No balance records. Run accrual or set individual balances.
+                    {t('leave.noBalanceRecords')}
                   </td>
                 </tr>
               )}
@@ -250,19 +254,19 @@ function AdminBalancePanel() {
       <Modal
         open={!!editRow}
         onClose={() => setEditRow(null)}
-        title={`Set Balance — ${editRow?.employee?.fullName ?? ''}`}
+        title={t('leave.setBalanceTitle', { name: editRow?.employee?.fullName ?? '' })}
         size="sm"
         footer={
           <>
-            <Button variant="secondary" size="sm" onClick={() => setEditRow(null)}>Cancel</Button>
-            <Button size="sm" loading={saving} onClick={saveEdit}>Save</Button>
+            <Button variant="secondary" size="sm" onClick={() => setEditRow(null)}>{t('common.cancel')}</Button>
+            <Button size="sm" loading={saving} onClick={saveEdit}>{t('common.save')}</Button>
           </>
         }
       >
         <div className="space-y-4">
           {saveError && <Alert variant="error" message={saveError} />}
           <Input
-            label="Total leave days"
+            label={t('leave.totalLeaveDays')}
             type="number"
             min="0"
             step="0.5"
@@ -270,8 +274,8 @@ function AdminBalancePanel() {
             onChange={(e) => setEditTotal(e.target.value)}
           />
           <Input
-            label="Reason (optional)"
-            placeholder="e.g. Annual allocation 2025"
+            label={t('leave.reasonOptional')}
+            placeholder={t('leave.reasonPlaceholderAccrual')}
             value={editReason}
             onChange={(e) => setEditReason(e.target.value)}
           />
@@ -286,6 +290,7 @@ function AdminBalancePanel() {
 export default function LeavePage() {
   const { user } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const [result, setResult] = useState<PaginatedResponse<LeaveRequest> | null>(null);
   const [balance, setBalance] = useState<LeaveBalance | null>(null);
@@ -373,7 +378,7 @@ export default function LeavePage() {
   }
 
   return (
-    <AppShell title="Leave Management">
+    <AppShell title={t('leave.title')}>
       <div className="space-y-5">
 
         {pageError && <Alert variant="error" message={pageError} />}
@@ -394,7 +399,7 @@ export default function LeavePage() {
             <BalanceCard balance={balance} />
           ) : !loading ? (
             <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-5 text-center text-sm text-gray-400">
-              No leave balance record yet.
+              {t('leave.noBalance')}
             </div>
           ) : null}
           {accrualLog.length > 0 && <AccrualLog logs={accrualLog} />}
@@ -407,20 +412,20 @@ export default function LeavePage() {
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
             <div className="flex items-center gap-3">
-              <h3 className="text-base font-semibold text-gray-800">Leave Requests</h3>
+              <h3 className="text-base font-semibold text-gray-800">{t('leave.allRequests')}</h3>
               <select
                 value={statusFilter}
                 onChange={(e) => { setStatusFilter(e.target.value); reset(); }}
                 className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                <option value="">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="">{t('leave.allStatus')}</option>
+                <option value="pending">{t('common.pending')}</option>
+                <option value="approved">{t('common.approved')}</option>
+                <option value="rejected">{t('common.rejected')}</option>
+                <option value="cancelled">{t('common.cancelled')}</option>
               </select>
             </div>
-            <Button onClick={() => setShowModal(true)}>+ Request Leave</Button>
+            <Button onClick={() => setShowModal(true)}>{t('leave.requestLeave')}</Button>
           </div>
 
           {loading ? (
@@ -431,13 +436,13 @@ export default function LeavePage() {
                 <table className="w-full text-sm">
                   <thead className="border-b border-gray-100 bg-gray-50 text-xs font-medium uppercase tracking-wide text-gray-500">
                     <tr>
-                      {isAdminOrHR && <th className="px-6 py-3 text-left">Employee</th>}
-                      <th className="px-6 py-3 text-left">Type</th>
-                      <th className="px-6 py-3 text-left">Date Range</th>
-                      <th className="px-6 py-3 text-left">Days</th>
-                      <th className="px-6 py-3 text-left">Status</th>
-                      <th className="px-6 py-3 text-left">Step</th>
-                      <th className="px-6 py-3 text-left">Actions</th>
+                      {isAdminOrHR && <th className="px-6 py-3 text-left">{t('leave.colEmployee')}</th>}
+                      <th className="px-6 py-3 text-left">{t('leave.colType')}</th>
+                      <th className="px-6 py-3 text-left">{t('leave.colDateRange')}</th>
+                      <th className="px-6 py-3 text-left">{t('leave.colDays')}</th>
+                      <th className="px-6 py-3 text-left">{t('leave.colStatus')}</th>
+                      <th className="px-6 py-3 text-left">{t('leave.colStep')}</th>
+                      <th className="px-6 py-3 text-left">{t('leave.colActions')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -472,17 +477,17 @@ export default function LeavePage() {
                                   className="bg-emerald-600 hover:bg-emerald-700 text-white border-0"
                                   onClick={() => handleApprove(leave.id)}
                                 >
-                                  Approve
+                                  {t('leave.approve')}
                                 </Button>
                                 <Button size="sm" variant="danger" onClick={() => setRejectTarget(leave)}>
-                                  Reject
+                                  {t('leave.reject')}
                                 </Button>
                               </>
                             )}
                             {(leave.status === 'pending' || leave.status === 'approved') &&
                               leave.employeeId === user?.id && (
                                 <Button size="sm" variant="ghost" onClick={() => handleCancel(leave.id)}>
-                                  Cancel
+                                  {t('leave.cancel')}
                                 </Button>
                               )}
                           </div>
@@ -492,7 +497,7 @@ export default function LeavePage() {
                     {result?.data.length === 0 && (
                       <tr>
                         <td colSpan={isAdminOrHR ? 7 : 6} className="px-6 py-12 text-center text-sm text-gray-400">
-                          No leave requests found
+                          {t('leave.noRequests')}
                         </td>
                       </tr>
                     )}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -28,6 +29,7 @@ type ChangePasswordModalProps = (AdminModeProps | SelfModeProps) & {
 export function ChangePasswordModal(props: ChangePasswordModalProps) {
   const { open, onClose } = props;
   const isAdmin = props.mode === 'admin';
+  const { t } = useTranslation();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword]         = useState('');
@@ -49,16 +51,16 @@ export function ChangePasswordModal(props: ChangePasswordModalProps) {
 
   function validate(): boolean {
     const errs: typeof errors = {};
-    if (!isAdmin && !currentPassword) errs.current = 'Current password is required';
+    if (!isAdmin && !currentPassword) errs.current = t('validation.currentPasswordRequired');
     if (!newPassword) {
-      errs.new = 'New password is required';
+      errs.new = t('validation.passwordRequired');
     } else if (newPassword.length < 8) {
-      errs.new = 'Password must be at least 8 characters';
+      errs.new = t('validation.passwordMinLength');
     }
     if (!confirmPassword) {
-      errs.confirm = 'Please confirm your new password';
+      errs.confirm = t('validation.passwordConfirmRequired');
     } else if (newPassword !== confirmPassword) {
-      errs.confirm = 'Passwords do not match';
+      errs.confirm = t('validation.passwordMismatch');
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -82,15 +84,15 @@ export function ChangePasswordModal(props: ChangePasswordModalProps) {
       const msg =
         (err as { response?: { data?: { message?: string | string[] } } })
           ?.response?.data?.message;
-      setApiError(Array.isArray(msg) ? msg[0] : (msg ?? 'Failed to change password'));
+      setApiError(Array.isArray(msg) ? msg[0] : (msg ?? t('validation.failedToChangePassword')));
     } finally {
       setSaving(false);
     }
   }
 
   const title = isAdmin
-    ? `Reset Password — ${(props as AdminModeProps).employeeName ?? 'Employee'}`
-    : 'Change My Password';
+    ? t('profile.resetPasswordTitle', { name: (props as AdminModeProps).employeeName ?? t('common.employee') })
+    : t('profile.changeMyPassword');
 
   return (
     <Modal open={open} onClose={onClose} title={title} size="sm">
@@ -101,7 +103,7 @@ export function ChangePasswordModal(props: ChangePasswordModalProps) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <p className="text-sm font-medium text-gray-800">Password changed successfully</p>
+          <p className="text-sm font-medium text-gray-800">{t('profile.passwordUpdated')}</p>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -109,9 +111,9 @@ export function ChangePasswordModal(props: ChangePasswordModalProps) {
 
           {!isAdmin && (
             <Input
-              label="Current Password *"
+              label={t('profile.currentPassword')}
               type="password"
-              placeholder="Your current password"
+              placeholder={t('profile.currentPasswordPlaceholder')}
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               error={errors.current}
@@ -119,18 +121,18 @@ export function ChangePasswordModal(props: ChangePasswordModalProps) {
           )}
 
           <Input
-            label="New Password *"
+            label={t('profile.newPassword')}
             type="password"
-            placeholder="Min. 8 characters"
+            placeholder={t('profile.newPasswordPlaceholder')}
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             error={errors.new}
           />
 
           <Input
-            label="Confirm New Password *"
+            label={t('profile.confirmPassword')}
             type="password"
-            placeholder="Repeat new password"
+            placeholder={t('profile.confirmPasswordPlaceholder')}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             error={errors.confirm}
@@ -138,16 +140,16 @@ export function ChangePasswordModal(props: ChangePasswordModalProps) {
 
           {isAdmin && (
             <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-              You are resetting this employee's password. They will need to use the new password on their next login.
+              {t('profile.resetWarning')}
             </p>
           )}
 
           <div className="flex justify-end gap-3 pt-1">
             <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="submit" loading={saving}>
-              {isAdmin ? 'Reset Password' : 'Change Password'}
+              {isAdmin ? t('profile.resetPassword') : t('profile.changePassword')}
             </Button>
           </div>
         </form>

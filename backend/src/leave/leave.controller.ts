@@ -84,6 +84,16 @@ export class LeaveController {
     return this.leaveBalanceService.getAllBalances();
   }
 
+  // ── GET /leave-request/balance/:employeeId (admin / hr / manager) ─────────
+
+  @Get('balance/:employeeId')
+  @Roles('admin', 'hr', 'manager')
+  @ApiOperation({ summary: 'Get leave balance for a specific employee (admin, hr, manager)' })
+  @ApiParam({ name: 'employeeId', type: Number })
+  getEmployeeBalance(@Param('employeeId', ParseIntPipe) employeeId: number) {
+    return this.leaveBalanceService.getBalance(employeeId);
+  }
+
   // ── POST /leave-request/balance/accrue (admin / hr) ───────────────────────
 
   @Post('balance/accrue')

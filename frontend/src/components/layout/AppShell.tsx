@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
@@ -13,7 +14,7 @@ import { cn } from '@/utils/cn';
 const BOTTOM_NAV = [
   {
     href: '/dashboard',
-    label: 'Home',
+    labelKey: 'nav.home',
     icon: (
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -23,7 +24,7 @@ const BOTTOM_NAV = [
   },
   {
     href: '/attendance',
-    label: 'Attendance',
+    labelKey: 'nav.attendance',
     icon: (
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -33,7 +34,7 @@ const BOTTOM_NAV = [
   },
   {
     href: '/leave',
-    label: 'Leave',
+    labelKey: 'nav.leave',
     icon: (
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -43,7 +44,7 @@ const BOTTOM_NAV = [
   },
   {
     href: '/calendar',
-    label: 'Calendar',
+    labelKey: 'nav.calendar',
     icon: (
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -55,6 +56,7 @@ const BOTTOM_NAV = [
 
 function MobileBottomNav({ onMoreClick }: { onMoreClick: () => void }) {
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-10 flex h-16 items-center border-t border-gray-200 bg-white lg:hidden"
@@ -73,7 +75,7 @@ function MobileBottomNav({ onMoreClick }: { onMoreClick: () => void }) {
             <span className={cn('transition-transform active:scale-90', active && 'text-indigo-600')}>
               {item.icon}
             </span>
-            <span>{item.label}</span>
+            <span>{t(item.labelKey)}</span>
           </Link>
         );
       })}
@@ -87,7 +89,7 @@ function MobileBottomNav({ onMoreClick }: { onMoreClick: () => void }) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
             d="M4 6h16M4 12h16M4 18h7" />
         </svg>
-        <span>More</span>
+        <span>{t('nav.more')}</span>
       </button>
     </nav>
   );
@@ -102,6 +104,7 @@ interface AppShellProps {
 
 export function AppShell({ children, title }: AppShellProps) {
   const { user, loading } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -135,7 +138,7 @@ export function AppShell({ children, title }: AppShellProps) {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
-          <p className="text-sm text-gray-400">Loading…</p>
+          <p className="text-sm text-gray-400">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -154,7 +157,7 @@ export function AppShell({ children, title }: AppShellProps) {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
-          <p className="text-sm text-gray-400">Redirecting…</p>
+          <p className="text-sm text-gray-400">{t('common.redirecting')}</p>
         </div>
       </div>
     );

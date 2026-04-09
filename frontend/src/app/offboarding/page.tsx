@@ -12,6 +12,7 @@ import { statusBadge } from '@/components/ui/Badge';
 import { offboardingService } from '@/services/offboarding.service';
 import { usePagination } from '@/hooks/usePagination';
 import { useAuth } from '@/hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/utils/format';
 import type { ResignationRequest, PaginatedResponse } from '@/types';
 
@@ -33,6 +34,7 @@ interface SubmitModalProps {
 }
 
 function SubmitResignationModal({ open, onClose, onSuccess }: SubmitModalProps) {
+  const { t } = useTranslation();
   const [lastWorkingDate, setLastWorkingDate] = useState('');
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
@@ -46,8 +48,8 @@ function SubmitResignationModal({ open, onClose, onSuccess }: SubmitModalProps) 
   }
 
   async function handleSubmit() {
-    if (!lastWorkingDate) { setError('Last working date is required.'); return; }
-    if (!reason.trim()) { setError('Reason is required.'); return; }
+    if (!lastWorkingDate) { setError(t('offboarding.lastDateRequired')); return; }
+    if (!reason.trim()) { setError(t('offboarding.reasonRequired')); return; }
     setSaving(true);
     setError('');
     try {
@@ -55,7 +57,7 @@ function SubmitResignationModal({ open, onClose, onSuccess }: SubmitModalProps) 
       handleClose();
       onSuccess();
     } catch (err) {
-      setError(extractError(err, 'Failed to submit resignation.'));
+      setError(extractError(err, t('common.error')));
     } finally {
       setSaving(false);
     }
@@ -65,19 +67,19 @@ function SubmitResignationModal({ open, onClose, onSuccess }: SubmitModalProps) 
     <Modal
       open={open}
       onClose={handleClose}
-      title="Submit Resignation"
+      title={t('offboarding.resign')}
       size="md"
       footer={
         <>
-          <Button variant="secondary" size="sm" onClick={handleClose}>Cancel</Button>
-          <Button size="sm" loading={saving} onClick={handleSubmit}>Submit</Button>
+          <Button variant="secondary" size="sm" onClick={handleClose}>{t('common.cancel')}</Button>
+          <Button size="sm" loading={saving} onClick={handleSubmit}>{t('common.submit')}</Button>
         </>
       }
     >
       <div className="space-y-4">
         {error && <Alert variant="error" message={error} />}
         <Input
-          label="Last Working Date *"
+          label={t('offboarding.lastWorkingDate')}
           type="date"
           value={lastWorkingDate}
           min={new Date().toISOString().slice(0, 10)}
@@ -85,13 +87,13 @@ function SubmitResignationModal({ open, onClose, onSuccess }: SubmitModalProps) 
         />
         <div className="space-y-1">
           <label className="block text-sm font-medium text-gray-700">
-            Reason <span className="text-red-500">*</span>
+            {t('offboarding.reason')} <span className="text-red-500">*</span>
           </label>
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={4}
-            placeholder="Please explain your reason for resigning..."
+            placeholder={t('offboarding.reasonPlaceholder')}
             className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
           />
         </div>
@@ -110,6 +112,7 @@ interface RejectModalProps {
 }
 
 function RejectModal({ open, onClose, onConfirm, employeeName }: RejectModalProps) {
+  const { t } = useTranslation();
   const [comments, setComments] = useState('');
 
   function handleClose() { setComments(''); onClose(); }
@@ -119,18 +122,18 @@ function RejectModal({ open, onClose, onConfirm, employeeName }: RejectModalProp
     <Modal
       open={open}
       onClose={handleClose}
-      title={`Reject Resignation${employeeName ? ` — ${employeeName}` : ''}`}
+      title={`${t('leave.rejectTitle')}${employeeName ? ` — ${employeeName}` : ''}`}
       size="sm"
       footer={
         <>
-          <Button variant="secondary" size="sm" onClick={handleClose}>Cancel</Button>
-          <Button variant="danger" size="sm" onClick={handleConfirm}>Confirm Reject</Button>
+          <Button variant="secondary" size="sm" onClick={handleClose}>{t('common.cancel')}</Button>
+          <Button variant="danger" size="sm" onClick={handleConfirm}>{t('leave.confirmReject')}</Button>
         </>
       }
     >
       <Input
-        label="Reason (optional)"
-        placeholder="Why is this resignation being rejected?"
+        label={t('leave.rejectReason')}
+        placeholder={t('leave.rejectReasonPlaceholder')}
         value={comments}
         onChange={(e) => setComments(e.target.value)}
       />
@@ -141,6 +144,7 @@ function RejectModal({ open, onClose, onConfirm, employeeName }: RejectModalProp
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function OffboardingPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [result, setResult] = useState<PaginatedResponse<ResignationRequest> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -160,7 +164,6 @@ export default function OffboardingPage() {
     setPageError('');
     try {
       if (isEmployee) {
-        // Employees see only their own
         const myList = await offboardingService.listMy();
         setResult({
           data: myList,
@@ -175,11 +178,11 @@ export default function OffboardingPage() {
         setResult(data);
       }
     } catch (err) {
-      setPageError(extractError(err, 'Failed to load resignation requests.'));
+      setPageError(extractError(err, t('common.error')));
     } finally {
       setLoading(false);
     }
-  }, [page, limit, statusFilter, isEmployee]);
+  }, [page, limit, statusFilter, isEmployee, t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -190,7 +193,7 @@ export default function OffboardingPage() {
       await offboardingService.approve(id);
       await load();
     } catch (err) {
-      setActionError(extractError(err, 'Approval failed.'));
+      setActionError(extractError(err, t('common.error')));
     } finally {
       setActing(null);
     }
@@ -205,14 +208,14 @@ export default function OffboardingPage() {
       setRejectTarget(null);
       await load();
     } catch (err) {
-      setActionError(extractError(err, 'Rejection failed.'));
+      setActionError(extractError(err, t('common.error')));
     } finally {
       setActing(null);
     }
   }
 
   return (
-    <AppShell title="Offboarding">
+    <AppShell title={t('offboarding.title')}>
       <div className="space-y-5">
         {pageError && <Alert variant="error" message={pageError} />}
         {actionError && <Alert variant="error" message={actionError} />}
@@ -221,10 +224,10 @@ export default function OffboardingPage() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-6 py-4">
             <div className="flex items-center gap-3">
               <h3 className="text-base font-semibold text-gray-800">
-                Resignation Requests
+                {t('offboarding.title')}
                 {result && (
                   <span className="ml-2 text-sm font-normal text-gray-400">
-                    ({result.meta.total} total)
+                    ({result.meta.total} {t('common.total')})
                   </span>
                 )}
               </h3>
@@ -234,16 +237,16 @@ export default function OffboardingPage() {
                   onChange={(e) => { setStatusFilter(e.target.value); reset(); }}
                   className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                  <option value="completed">Completed</option>
+                  <option value="">{t('leave.allStatus')}</option>
+                  <option value="pending">{t('common.pending')}</option>
+                  <option value="approved">{t('common.approved')}</option>
+                  <option value="rejected">{t('common.rejected')}</option>
+                  <option value="completed">{t('common.active')}</option>
                 </select>
               )}
             </div>
             <Button size="sm" onClick={() => setShowSubmit(true)}>
-              + Submit Resignation
+              {t('offboarding.resign')}
             </Button>
           </div>
 
@@ -255,13 +258,13 @@ export default function OffboardingPage() {
                 <table className="w-full text-sm">
                   <thead className="border-b border-gray-100 bg-gray-50 text-xs font-medium uppercase tracking-wide text-gray-500">
                     <tr>
-                      {!isEmployee && <th className="px-6 py-3 text-left">Employee</th>}
-                      <th className="px-6 py-3 text-left">Last Working Date</th>
-                      <th className="px-6 py-3 text-left">Reason</th>
-                      <th className="px-6 py-3 text-left">Status</th>
-                      <th className="px-6 py-3 text-left">Step</th>
-                      <th className="px-6 py-3 text-left">Submitted</th>
-                      {isApprover && <th className="px-6 py-3 text-left">Actions</th>}
+                      {!isEmployee && <th className="px-6 py-3 text-left">{t('common.employee')}</th>}
+                      <th className="px-6 py-3 text-left">{t('offboarding.lastWorkingDate')}</th>
+                      <th className="px-6 py-3 text-left">{t('common.reason')}</th>
+                      <th className="px-6 py-3 text-left">{t('common.status')}</th>
+                      <th className="px-6 py-3 text-left">{t('common.step')}</th>
+                      <th className="px-6 py-3 text-left">{t('common.date')}</th>
+                      {isApprover && <th className="px-6 py-3 text-left">{t('common.actions')}</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -290,7 +293,7 @@ export default function OffboardingPage() {
                                   className="bg-emerald-600 hover:bg-emerald-700 text-white border-0"
                                   onClick={() => handleApprove(res.id)}
                                 >
-                                  Approve
+                                  {t('leave.approve')}
                                 </Button>
                                 <Button
                                   size="sm"
@@ -298,7 +301,7 @@ export default function OffboardingPage() {
                                   disabled={acting === res.id}
                                   onClick={() => setRejectTarget(res)}
                                 >
-                                  Reject
+                                  {t('leave.reject')}
                                 </Button>
                               </div>
                             )}
@@ -312,7 +315,7 @@ export default function OffboardingPage() {
                           colSpan={isApprover && !isEmployee ? 7 : isEmployee ? 5 : 6}
                           className="px-6 py-12 text-center text-sm text-gray-400"
                         >
-                          No resignation requests found.
+                          {t('common.noData')}
                         </td>
                       </tr>
                     )}

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Alert } from '@/components/ui/Alert';
+import { useTranslation } from 'react-i18next';
 import { leaveService } from '@/services/leave.service';
 import type { LeaveBalance } from '@/types';
 
@@ -29,11 +30,7 @@ const INITIAL: FormState = {
   reason: '',
 };
 
-const LEAVE_TYPE_OPTIONS = [
-  { value: 'annual', label: 'Annual Leave' },
-  { value: 'sick', label: 'Sick Leave' },
-  { value: 'unpaid', label: 'Unpaid Leave' },
-];
+// Options built inside component to support translations (see below)
 
 /** Count business days (Mon–Fri) between two date strings, inclusive. */
 function countBusinessDays(from: string, to: string): number {
@@ -50,11 +47,18 @@ function countBusinessDays(from: string, to: string): number {
 }
 
 export function CreateLeaveModal({ open, onClose, onSuccess }: CreateLeaveModalProps) {
+  const { t } = useTranslation();
   const [form, setForm] = useState<FormState>(INITIAL);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
   const [balance, setBalance] = useState<LeaveBalance | null>(null);
+
+  const LEAVE_TYPE_OPTIONS = [
+    { value: 'annual', label: t('leave.annual') },
+    { value: 'sick',   label: t('leave.sick') },
+    { value: 'unpaid', label: t('leave.unpaid') },
+  ];
 
   useEffect(() => {
     if (!open) return;
@@ -68,11 +72,11 @@ export function CreateLeaveModal({ open, onClose, onSuccess }: CreateLeaveModalP
 
   function validate(): boolean {
     const errs: Partial<Record<keyof FormState, string>> = {};
-    if (!form.fromDate) errs.fromDate = 'From date is required';
-    if (!form.toDate) errs.toDate = 'To date is required';
+    if (!form.fromDate) errs.fromDate = t('validation.fromDateRequired');
+    if (!form.toDate) errs.toDate = t('validation.toDateRequired');
     else if (form.fromDate && form.toDate < form.fromDate)
-      errs.toDate = 'To date must be on or after from date';
-    if (!form.reason.trim()) errs.reason = 'Reason is required';
+      errs.toDate = t('validation.toDateAfterFrom');
+    if (!form.reason.trim()) errs.reason = t('validation.reasonRequired');
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -90,7 +94,7 @@ export function CreateLeaveModal({ open, onClose, onSuccess }: CreateLeaveModalP
       const msg =
         (err as { response?: { data?: { message?: string | string[] } } })
           ?.response?.data?.message;
-      setApiError(Array.isArray(msg) ? msg[0] : (msg ?? 'Failed to submit leave request'));
+      setApiError(Array.isArray(msg) ? msg[0] : (msg ?? t('leave.failedToSubmit')));
     } finally {
       setLoading(false);
     }
@@ -108,15 +112,15 @@ export function CreateLeaveModal({ open, onClose, onSuccess }: CreateLeaveModalP
     <Modal
       open={open}
       onClose={onClose}
-      title="New Leave Request"
+      title={t('leave.newRequest')}
       size="md"
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={loading}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button form="create-leave-form" type="submit" loading={loading} disabled={willExceed}>
-            Submit Request
+            {t('leave.submitRequest')}
           </Button>
         </>
       }
@@ -132,21 +136,20 @@ export function CreateLeaveModal({ open, onClose, onSuccess }: CreateLeaveModalP
               ? 'bg-red-50 border border-red-200 text-red-700'
               : 'bg-indigo-50 border border-indigo-100 text-indigo-700',
           ].join(' ')}>
-            <span className="font-medium">Leave balance:</span>{' '}
-            <span className="font-bold">{Number(balance.remaining)}</span> day(s) remaining
-            {' '}of {Number(balance.total)} total
+            <span className="font-medium">{t('leave.balanceHint')}</span>{' '}
+            <span className="font-bold">{Number(balance.remaining)}</span>{' '}
+            {t('leave.balanceDaysRemaining', { total: Number(balance.total) })}
             {requestedDays > 0 && form.leaveType !== 'unpaid' && (
               <>
-                {' '}— requesting{' '}
-                <span className={willExceed ? 'font-bold' : ''}>{requestedDays} day(s)</span>
-                {willExceed && ' (exceeds balance)'}
+                {' '}— {t('leave.requesting', { n: requestedDays })}
+                {willExceed && ` ${t('leave.exceedsBalance')}`}
               </>
             )}
           </div>
         )}
 
         <Select
-          label="Leave Type"
+          label={t('leave.leaveType')}
           value={form.leaveType}
           options={LEAVE_TYPE_OPTIONS}
           onChange={(e) => set('leaveType', e.target.value as FormState['leaveType'])}
@@ -154,14 +157,14 @@ export function CreateLeaveModal({ open, onClose, onSuccess }: CreateLeaveModalP
 
         <div className="grid grid-cols-2 gap-3">
           <Input
-            label="From Date *"
+            label={t('leave.fromDate')}
             type="date"
             value={form.fromDate}
             onChange={(e) => set('fromDate', e.target.value)}
             error={errors.fromDate}
           />
           <Input
-            label="To Date *"
+            label={t('leave.toDate')}
             type="date"
             value={form.toDate}
             min={form.fromDate}
@@ -172,19 +175,19 @@ export function CreateLeaveModal({ open, onClose, onSuccess }: CreateLeaveModalP
 
         {requestedDays > 0 && (
           <p className="text-xs text-gray-500">
-            {requestedDays} business day(s) selected
+            {t('common.daysSelected', { n: requestedDays })}
           </p>
         )}
 
         <div className="space-y-1">
           <label className="block text-sm font-medium text-gray-700">
-            Reason <span className="text-red-500">*</span>
+            {t('leave.reason')} <span className="text-red-500">*</span>
           </label>
           <textarea
             value={form.reason}
             onChange={(e) => set('reason', e.target.value)}
             rows={3}
-            placeholder="Please describe the reason for your leave..."
+            placeholder={t('leave.reasonPlaceholder')}
             className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
           />
           {errors.reason && <p className="text-xs text-red-500">{errors.reason}</p>}

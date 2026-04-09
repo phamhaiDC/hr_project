@@ -41,7 +41,10 @@
       "Bash(PGPASSWORD='Dcorp$8tqk' psql:*)",
       "Bash(npx next:*)",
       "Bash(find /Volumes/Working_Space/AI_DEV_Projects/hr-project/backend/src -name \"*.guard.ts\" -exec grep -l \"canActivate\" {} \\\\;)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(npm install:*)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(node_modules/.bin/tsc --noEmit)"
     ]
   }
 }

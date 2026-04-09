@@ -1,6 +1,8 @@
 'use client';
 
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { cn } from '@/utils/cn';
 import type { Role } from '@/utils/rbac';
 
@@ -18,6 +20,7 @@ interface TopbarProps {
 
 export function Topbar({ title, onMenuClick }: TopbarProps) {
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
   const role = user?.role as Role | undefined;
 
   return (
@@ -63,17 +66,20 @@ export function Topbar({ title, onMenuClick }: TopbarProps) {
             </span>
           )}
 
+          {/* Language switcher */}
+          <LanguageSwitcher />
+
           {/* Logout */}
           <button
             onClick={logout}
-            title="Sign out"
+            title={t('common.signOut')}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors lg:h-auto lg:w-auto lg:gap-1.5 lg:px-3 lg:py-1.5 lg:text-sm"
           >
             <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            <span className="hidden lg:inline">Sign out</span>
+            <span className="hidden lg:inline">{t('common.signOut')}</span>
           </button>
         </div>
       )}

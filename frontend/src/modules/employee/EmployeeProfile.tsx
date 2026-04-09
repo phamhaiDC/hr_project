@@ -1,7 +1,8 @@
+import { useTranslation } from 'react-i18next';
 import { statusBadge } from '@/components/ui/Badge';
 import { EmployeeAvatar } from './EmployeeAvatar';
 import { formatDate, capitalise } from '@/utils/format';
-import type { Employee } from '@/types';
+import type { Employee, LeaveBalance } from '@/types';
 
 interface FieldProps {
   label: string;
@@ -19,9 +20,12 @@ function Field({ label, value }: FieldProps) {
 
 interface EmployeeProfileProps {
   employee: Employee;
+  leaveBalance?: LeaveBalance | null;
 }
 
-export function EmployeeProfile({ employee }: EmployeeProfileProps) {
+export function EmployeeProfile({ employee, leaveBalance }: EmployeeProfileProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="space-y-6">
       {/* Hero card */}
@@ -42,7 +46,7 @@ export function EmployeeProfile({ employee }: EmployeeProfileProps) {
         </div>
         <div className="hidden sm:block text-right">
           <p className="font-mono text-lg font-bold text-indigo-600">{employee.code}</p>
-          <p className="text-xs text-gray-400">Employee Code</p>
+          <p className="text-xs text-gray-400">{t('profile.employeeCode')}</p>
         </div>
       </div>
 
@@ -51,33 +55,37 @@ export function EmployeeProfile({ employee }: EmployeeProfileProps) {
         {/* Personal info */}
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h3 className="mb-4 text-sm font-semibold text-gray-700 uppercase tracking-wide">
-            Personal Information
+            {t('profile.personalInfo')}
           </h3>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
-            <Field label="Full Name" value={employee.fullName} />
-            <Field label="Email" value={employee.email} />
-            <Field label="Phone" value={employee.phone} />
-            <Field label="Employee Code" value={
+            <Field label={t('profile.fullName')} value={employee.fullName} />
+            <Field label={t('common.email')} value={employee.email} />
+            <Field label={t('common.phone')} value={employee.phone} />
+            <Field label={t('profile.employeeCode')} value={
               <span className="font-mono">{employee.code}</span>
             } />
-            <Field label="Join Date" value={formatDate(employee.joinDate)} />
-            <Field label="Status" value={statusBadge(employee.status)} />
-            <Field label="Telegram ID" value={employee.telegramId} />
+            <Field label={t('profile.joinDate')} value={formatDate(employee.joinDate)} />
+            <Field label={t('common.status')} value={statusBadge(employee.status)} />
+            <Field label={t('profile.telegramId')} value={employee.telegramId} />
           </dl>
         </div>
 
         {/* Work info */}
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h3 className="mb-4 text-sm font-semibold text-gray-700 uppercase tracking-wide">
-            Work Information
+            {t('profile.workInfo')}
           </h3>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
-            <Field label="Department" value={employee.department?.name} />
-            <Field label="Position" value={employee.position?.name} />
-            <Field label="Branch" value={employee.branch?.name} />
-            <Field label="Role" value={capitalise(employee.role ?? '')} />
+            <Field label={t('common.department')} value={employee.department?.name} />
+            <Field label={t('common.position')} value={employee.position?.name} />
+            <Field label={t('common.branch')} value={employee.branch?.name} />
+            <Field label={t('common.role')} value={capitalise(employee.role ?? '')} />
             <Field
-              label="Direct Manager"
+              label={t('profile.initialLeaveBalance')}
+              value={leaveBalance != null ? leaveBalance.total : undefined}
+            />
+            <Field
+              label={t('profile.directManager')}
               value={
                 employee.manager ? (
                   <div>

@@ -62,6 +62,10 @@ export const leaveService = {
   allBalances: () =>
     api.get<LeaveBalance[]>('/leave-request/balance/all').then((r) => r.data),
 
+  /** Admin/HR/Manager: get a specific employee's balance */
+  getEmployeeBalance: (employeeId: number) =>
+    api.get<LeaveBalance | null>(`/leave-request/balance/${employeeId}`).then((r) => r.data),
+
   /** Admin/HR: set employee balance total */
   setBalance: (employeeId: number, payload: SetBalancePayload) =>
     api.post<LeaveBalance>(`/leave-request/balance/${employeeId}`, payload).then((r) => r.data),

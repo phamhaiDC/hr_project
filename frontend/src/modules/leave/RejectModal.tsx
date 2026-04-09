@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 
@@ -12,6 +13,7 @@ interface RejectModalProps {
 }
 
 export function RejectModal({ open, onClose, onConfirm, employeeName }: RejectModalProps) {
+  const { t } = useTranslation();
   const [comments, setComments] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -36,15 +38,15 @@ export function RejectModal({ open, onClose, onConfirm, employeeName }: RejectMo
     <Modal
       open={open}
       onClose={handleClose}
-      title="Reject Leave Request"
+      title={t('leave.rejectTitle')}
       size="sm"
       footer={
         <>
           <Button variant="secondary" onClick={handleClose} disabled={loading}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button variant="danger" form="reject-form" type="submit" loading={loading}>
-            Confirm Reject
+            {t('leave.confirmReject')}
           </Button>
         </>
       }
@@ -52,18 +54,19 @@ export function RejectModal({ open, onClose, onConfirm, employeeName }: RejectMo
       <form id="reject-form" onSubmit={handleSubmit} className="space-y-4">
         {employeeName && (
           <p className="text-sm text-gray-600">
-            Rejecting leave request from <span className="font-medium text-gray-900">{employeeName}</span>.
+            {t('leave.rejectDescription', { name: '' })}
+            <span className="font-medium text-gray-900">{employeeName}</span>.
           </p>
         )}
         <div className="space-y-1">
           <label className="block text-sm font-medium text-gray-700">
-            Reason for rejection <span className="text-gray-400 font-normal">(optional)</span>
+            {t('leave.rejectReason')}
           </label>
           <textarea
             value={comments}
             onChange={(e) => setComments(e.target.value)}
             rows={3}
-            placeholder="Provide a reason so the employee understands..."
+            placeholder={t('leave.rejectReasonPlaceholder')}
             className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
           />
         </div>

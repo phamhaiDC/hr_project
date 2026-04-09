@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Alert } from '@/components/ui/Alert';
 import { PageSpinner } from '@/components/ui/Spinner';
+import { useTranslation } from 'react-i18next';
 import { systemConfigService, type SystemConfig } from '@/services/system-config.service';
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const [configs, setConfigs] = useState<SystemConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -26,20 +28,19 @@ export default function SettingsPage() {
         });
         setLocalValues(values);
       } catch (err) {
-        setError('Failed to load system settings.');
+        setError(t('settings.failedToLoad'));
       } finally {
         setLoading(false);
       }
     }
     fetchConfigs();
-  }, []);
+  }, [t]);
 
   async function handleUpdate(key: string) {
     setSaving(key);
     setError('');
     try {
       await systemConfigService.update(key, localValues[key]);
-      // Show success briefly? or just relies on button state
     } catch (err) {
       setError(`Failed to update ${key}.`);
     } finally {
@@ -47,18 +48,18 @@ export default function SettingsPage() {
     }
   }
 
-  if (loading) return <AppShell title="System Settings"><PageSpinner /></AppShell>;
+  if (loading) return <AppShell title={t('settings.title')}><PageSpinner /></AppShell>;
 
   const telegramConfigs = configs.filter(c => c.key.startsWith('telegram_'));
 
   return (
-    <AppShell title="System Settings">
+    <AppShell title={t('settings.title')}>
       <div className="max-w-3xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div>
           <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
-            Notification Settings
+            {t('settings.notificationSettings')}
           </h2>
-          <p className="mt-1 text-sm text-gray-500">Configure Telegram reminders for late check-ins.</p>
+          <p className="mt-1 text-sm text-gray-500">{t('settings.notificationDesc')}</p>
         </div>
 
         {error && <Alert variant="error" message={error} className="glassmorphism-alert" />}
@@ -72,12 +73,12 @@ export default function SettingsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                 </svg>
               </div>
-              <h3 className="font-semibold text-gray-900">Telegram Bot Integration</h3>
+              <h3 className="font-semibold text-gray-900">{t('settings.telegramBot')}</h3>
             </div>
           </div>
 
           <div className="divide-y divide-gray-100 p-6 space-y-6">
-            {telegramConfigs.length === 0 && <p className="text-gray-500 text-sm italic">No telegram configurations found in database.</p>}
+            {telegramConfigs.length === 0 && <p className="text-gray-500 text-sm italic">{t('settings.noTelegramConfig')}</p>}
             
             {telegramConfigs.map((c) => (
               <div key={c.key} className="pt-6 first:pt-0 group">
@@ -109,14 +110,14 @@ export default function SettingsPage() {
                       />
                     )}
                   </div>
-                  <Button 
-                    variant="primary" 
-                    size="md" 
+                  <Button
+                    variant="primary"
+                    size="md"
                     loading={saving === c.key}
                     onClick={() => handleUpdate(c.key)}
                     className="sm:w-24 shadow-sm hover:translate-y-[-1px] active:translate-y-[0px] transition-all"
                   >
-                    Update
+                    {t('common.update')}
                   </Button>
                 </div>
               </div>
@@ -131,11 +132,9 @@ export default function SettingsPage() {
             </svg>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-amber-800">Reminder Schedule Note</h4>
+            <h4 className="text-sm font-semibold text-amber-800">{t('settings.reminderScheduleNote')}</h4>
             <p className="mt-1 text-xs text-amber-700 leading-relaxed">
-              The system scans for missing clock-ins every minute. When the server time matches the 
-              set reminder time exactly, a notification will be triggered for all employees who have 
-              a Telegram ID and no check-in record for today.
+              {t('settings.reminderScheduleDesc')}
             </p>
           </div>
         </div>

@@ -3,13 +3,14 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/utils/cn';
 import { useAuth } from '@/context/AuthContext';
 import type { Role } from '@/utils/rbac';
 
 interface NavItem {
   href: string;
-  label: string;
+  labelKey: string;
   roles?: Role[];
   icon: React.ReactNode;
 }
@@ -17,7 +18,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   {
     href: '/dashboard',
-    label: 'Dashboard',
+    labelKey: 'nav.dashboard',
     icon: (
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -27,7 +28,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     href: '/employees',
-    label: 'Employees',
+    labelKey: 'nav.employees',
     roles: ['admin', 'hr', 'manager'],
     icon: (
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -38,7 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     href: '/branches',
-    label: 'Branches',
+    labelKey: 'nav.branches',
     roles: ['admin'],
     icon: (
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -49,7 +50,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     href: '/departments',
-    label: 'Departments',
+    labelKey: 'nav.departments',
     roles: ['admin', 'hr'],
     icon: (
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,7 +61,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     href: '/positions',
-    label: 'Positions',
+    labelKey: 'nav.positions',
     roles: ['admin', 'hr'],
     icon: (
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,7 +72,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     href: '/working-shifts',
-    label: 'Working Shifts',
+    labelKey: 'nav.workingShifts',
     roles: ['admin', 'hr'],
     icon: (
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -82,7 +83,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     href: '/leave',
-    label: 'Leave',
+    labelKey: 'nav.leave',
     icon: (
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -92,7 +93,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     href: '/attendance',
-    label: 'Attendance',
+    labelKey: 'nav.attendance',
     icon: (
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -102,7 +103,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     href: '/calendar',
-    label: 'Calendar',
+    labelKey: 'nav.calendar',
     icon: (
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -112,7 +113,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     href: '/offboarding',
-    label: 'Offboarding',
+    labelKey: 'nav.offboarding',
     roles: ['admin', 'hr', 'manager'],
     icon: (
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -123,7 +124,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     href: '/reports',
-    label: 'Reports',
+    labelKey: 'nav.reports',
     icon: (
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -133,7 +134,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     href: '/settings',
-    label: 'Settings',
+    labelKey: 'nav.settings',
     roles: ['admin', 'hr'],
     icon: (
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,6 +154,7 @@ interface SidebarProps {
 export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const role = user?.role as Role | undefined;
 
   const visibleItems = NAV_ITEMS.filter(
@@ -220,7 +222,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               <span className={cn('shrink-0', active ? 'text-indigo-600' : 'text-gray-400')}>
                 {item.icon}
               </span>
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           );
         })}
@@ -243,7 +245,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                   d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </span>
-            My Profile
+            {t('nav.myProfile')}
           </Link>
         )}
       </nav>

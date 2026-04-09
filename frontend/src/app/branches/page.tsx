@@ -8,6 +8,7 @@ import { Alert } from '@/components/ui/Alert';
 import { Modal } from '@/components/ui/Modal';
 import { PageSpinner, Spinner } from '@/components/ui/Spinner';
 import { useAuth } from '@/hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import { organizationService } from '@/services/organization.service';
 import type { Branch } from '@/types';
 
@@ -46,6 +47,7 @@ type FormErrors = Partial<Record<keyof FormState, string>>;
 const INITIAL_FORM: FormState = { name: '', latitude: '', longitude: '', radius: '50' };
 
 function BranchModal({ open, onClose, branch, onSuccess }: BranchModalProps) {
+  const { t } = useTranslation();
   const isEdit = branch !== null;
 
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
@@ -80,25 +82,25 @@ function BranchModal({ open, onClose, branch, onSuccess }: BranchModalProps) {
     const errs: FormErrors = {};
 
     if (!form.name.trim()) {
-      errs.name = 'Branch name is required';
+      errs.name = t('branch.nameRequired');
     }
 
     const hasLat = form.latitude.trim() !== '';
     const hasLng = form.longitude.trim() !== '';
 
     if (hasLat && parseLat(form.latitude) === null) {
-      errs.latitude = 'Must be a number between -90 and 90';
+      errs.latitude = t('branch.latInvalid');
     }
     if (hasLng && parseLng(form.longitude) === null) {
-      errs.longitude = 'Must be a number between -180 and 180';
+      errs.longitude = t('branch.lngInvalid');
     }
     // Coordinates must be paired — one without the other is invalid
-    if (hasLat && !hasLng) errs.longitude = 'Required when latitude is set';
-    if (hasLng && !hasLat) errs.latitude = 'Required when longitude is set';
+    if (hasLat && !hasLng) errs.longitude = t('branch.lngRequired');
+    if (hasLng && !hasLat) errs.latitude = t('branch.latRequired');
 
     const r = Number(form.radius);
     if (!form.radius.trim() || isNaN(r) || r <= 0) {
-      errs.radius = 'Must be a positive number';
+      errs.radius = t('branch.radiusInvalid');
     }
 
     setErrors(errs);
@@ -129,7 +131,7 @@ function BranchModal({ open, onClose, branch, onSuccess }: BranchModalProps) {
     } catch (err: unknown) {
       const raw = (err as { response?: { data?: { message?: string | string[] } } })
         ?.response?.data?.message;
-      setApiError(Array.isArray(raw) ? raw[0] : (raw ?? 'Failed to save branch'));
+      setApiError(Array.isArray(raw) ? raw[0] : (raw ?? t('branch.failedToSave')));
     } finally {
       setSaving(false);
     }
@@ -162,15 +164,15 @@ function BranchModal({ open, onClose, branch, onSuccess }: BranchModalProps) {
     <Modal
       open={open}
       onClose={onClose}
-      title={isEdit ? 'Edit Branch' : 'Add Branch'}
+      title={isEdit ? t('branch.edit') : t('branch.add')}
       size="lg"
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={saving}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button form="branch-form" type="submit" loading={saving}>
-            {isEdit ? 'Save Changes' : 'Create Branch'}
+            {isEdit ? t('common.saveChanges') : t('branch.add')}
           </Button>
         </>
       }
@@ -180,8 +182,8 @@ function BranchModal({ open, onClose, branch, onSuccess }: BranchModalProps) {
 
         {/* Name */}
         <Input
-          label="Branch Name *"
-          placeholder="e.g. Ho Chi Minh City Branch"
+          label={t('branch.nameLabel')}
+          placeholder={t('branch.namePlaceholder')}
           value={form.name}
           onChange={(e) => setField('name', e.target.value)}
           error={errors.name}
@@ -193,8 +195,7 @@ function BranchModal({ open, onClose, branch, onSuccess }: BranchModalProps) {
         <fieldset className="space-y-4">
           <div className="flex items-center justify-between">
             <legend className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-              GPS Location
-              <span className="ml-1 font-normal normal-case text-gray-400">— optional</span>
+              {t('branch.gpsSection')}
             </legend>
             <button
               type="button"
@@ -212,21 +213,21 @@ function BranchModal({ open, onClose, branch, onSuccess }: BranchModalProps) {
                     d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               )}
-              Use my GPS
+              {t('branch.useMyGps')}
             </button>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Latitude"
-              placeholder="−90 to 90  (e.g. 10.7719)"
+              label={t('branch.latitude')}
+              placeholder={t('branch.latitudePlaceholder')}
               value={form.latitude}
               onChange={(e) => setField('latitude', e.target.value)}
               error={errors.latitude}
             />
             <Input
-              label="Longitude"
-              placeholder="−180 to 180  (e.g. 106.7042)"
+              label={t('branch.longitude')}
+              placeholder={t('branch.longitudePlaceholder')}
               value={form.longitude}
               onChange={(e) => setField('longitude', e.target.value)}
               error={errors.longitude}
@@ -234,10 +235,10 @@ function BranchModal({ open, onClose, branch, onSuccess }: BranchModalProps) {
           </div>
 
           <Input
-            label="Geofence Radius (metres) *"
+            label={`${t('branch.radius')} *`}
             type="number"
             min={1}
-            placeholder="50"
+            placeholder={t('branch.radiusPlaceholder')}
             value={form.radius}
             onChange={(e) => setField('radius', e.target.value)}
             error={errors.radius}
@@ -246,7 +247,7 @@ function BranchModal({ open, onClose, branch, onSuccess }: BranchModalProps) {
           {/* Location preview */}
           {showMap ? (
             <div className="space-y-1.5">
-              <p className="text-xs text-gray-400">Location preview — read-only</p>
+              <p className="text-xs text-gray-400">{t('branch.locationPreview')}</p>
               <iframe
                 src={mapSrc}
                 className="h-48 w-full rounded-xl border border-gray-200"
@@ -256,7 +257,7 @@ function BranchModal({ open, onClose, branch, onSuccess }: BranchModalProps) {
             </div>
           ) : (
             <div className="flex h-24 items-center justify-center rounded-xl border border-dashed border-gray-200 text-xs text-gray-400">
-              Enter coordinates above or tap "Use my GPS" to preview the location
+              {t('branch.locationPreviewHint')}
             </div>
           )}
         </fieldset>
@@ -268,6 +269,7 @@ function BranchModal({ open, onClose, branch, onSuccess }: BranchModalProps) {
 // ─── GPS badge shown in table rows ───────────────────────────────────────────
 
 function GpsBadge({ branch }: { branch: Branch }) {
+  const { t } = useTranslation();
   const hasGps = branch.latitude != null && branch.longitude != null;
 
   if (!hasGps) {
@@ -277,7 +279,7 @@ function GpsBadge({ branch }: { branch: Branch }) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
             d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
         </svg>
-        No GPS
+        {t('common.noGps')}
       </span>
     );
   }
@@ -293,7 +295,7 @@ function GpsBadge({ branch }: { branch: Branch }) {
         rel="noopener noreferrer"
         className="text-xs text-indigo-500 hover:underline"
       >
-        View on map ↗
+        {t('common.viewOnMap')}
       </a>
     </div>
   );
@@ -302,6 +304,7 @@ function GpsBadge({ branch }: { branch: Branch }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function BranchesPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -339,20 +342,20 @@ export default function BranchesPage() {
   const colCount = isAdmin ? 5 : 4;
 
   return (
-    <AppShell title="Branches">
+    <AppShell title={t('branch.title')}>
       <div className="space-y-5">
 
         {/* Toolbar */}
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-500">
-            {loading ? '…' : `${branches.length} branch${branches.length !== 1 ? 'es' : ''}`}
+            {loading ? '…' : `${branches.length} ${t('nav.branches').toLowerCase()}`}
           </p>
           {isAdmin && (
             <Button onClick={openCreate}>
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              Add Branch
+              {t('branch.add')}
             </Button>
           )}
         </div>
@@ -360,7 +363,7 @@ export default function BranchesPage() {
         {/* Table card */}
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-100 px-6 py-4">
-            <h3 className="text-base font-semibold text-gray-800">All Branches</h3>
+            <h3 className="text-base font-semibold text-gray-800">{t('branch.title')}</h3>
           </div>
 
           {loading ? (
@@ -370,11 +373,11 @@ export default function BranchesPage() {
               <table className="w-full text-sm">
                 <thead className="border-b border-gray-100 bg-gray-50 text-xs font-medium uppercase tracking-wide text-gray-500">
                   <tr>
-                    <th className="px-6 py-3 text-left">Branch</th>
-                    <th className="px-6 py-3 text-left">Coordinates</th>
-                    <th className="px-6 py-3 text-left">Radius</th>
-                    <th className="px-6 py-3 text-left">Employees</th>
-                    {isAdmin && <th className="px-6 py-3 text-right">Actions</th>}
+                    <th className="px-6 py-3 text-left">{t('branch.colBranch')}</th>
+                    <th className="px-6 py-3 text-left">{t('branch.colCoordinates')}</th>
+                    <th className="px-6 py-3 text-left">{t('branch.colRadius')}</th>
+                    <th className="px-6 py-3 text-left">{t('branch.colEmployees')}</th>
+                    {isAdmin && <th className="px-6 py-3 text-right">{t('branch.colActions')}</th>}
                   </tr>
                 </thead>
 
@@ -418,7 +421,7 @@ export default function BranchesPage() {
                       {isAdmin && (
                         <td className="px-6 py-4 text-right">
                           <Button size="sm" variant="ghost" onClick={() => openEdit(b)}>
-                            Edit
+                            {t('common.edit')}
                           </Button>
                         </td>
                       )}
@@ -434,13 +437,13 @@ export default function BranchesPage() {
                               d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                           </svg>
                           <div className="space-y-1">
-                            <p className="text-sm font-medium text-gray-600">No branches yet</p>
+                            <p className="text-sm font-medium text-gray-600">{t('branch.noData')}</p>
                             <p className="text-xs">
-                              {isAdmin ? 'Add a branch to get started.' : 'No branches have been configured.'}
+                              {isAdmin ? t('branch.noDataSub') : t('branch.noDataConfigured')}
                             </p>
                           </div>
                           {isAdmin && (
-                            <Button size="sm" onClick={openCreate}>Add first branch</Button>
+                            <Button size="sm" onClick={openCreate}>{t('branch.addFirst')}</Button>
                           )}
                         </div>
                       </td>

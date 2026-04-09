@@ -199,7 +199,6 @@ model CalendarDay {
   isPaid Boolean  @default(true) @map("is_paid")
   note   String?
 
-
   @@map("calendar_day")
 }
 
@@ -232,22 +231,22 @@ model OfficeLocation {
 }
 
 model Shift {
-  id                Int         @id @default(autoincrement())
+  id                Int                       @id @default(autoincrement())
   name              String
-  startTime         String      @map("start_time")
-  endTime           String      @map("end_time")
-  breakMinutes      Int         @default(60) @map("break_minutes")
-  graceLateMinutes  Int         @default(15) @map("grace_late_minutes")
-  graceEarlyMinutes Int         @default(15) @map("grace_early_minutes")
-  isDefault         Boolean     @default(false) @map("is_default")
-  createdAt         DateTime    @default(now()) @map("created_at")
-  isCrossDay        Boolean     @default(false) @map("is_cross_day")
-  departmentId      Int?        @map("department_id")
-  code              String      @unique
-  isActive          Boolean     @default(true) @map("is_active")
+  startTime         String                    @map("start_time")
+  endTime           String                    @map("end_time")
+  breakMinutes      Int                       @default(60) @map("break_minutes")
+  graceLateMinutes  Int                       @default(15) @map("grace_late_minutes")
+  graceEarlyMinutes Int                       @default(15) @map("grace_early_minutes")
+  isDefault         Boolean                   @default(false) @map("is_default")
+  createdAt         DateTime                  @default(now()) @map("created_at")
+  isCrossDay        Boolean                   @default(false) @map("is_cross_day")
+  departmentId      Int?                      @map("department_id")
+  code              String                    @unique
+  isActive          Boolean                   @default(true) @map("is_active")
+  attendances       Attendance[]
   currentEmployees  Employee[]                @relation("EmployeeToShift")
   assignments       EmployeeShiftAssignment[]
-  attendances       Attendance[]
   department        Department?               @relation(fields: [departmentId], references: [id])
 
   @@map("shift")

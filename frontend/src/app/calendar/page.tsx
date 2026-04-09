@@ -10,6 +10,7 @@ import { PageSpinner } from '@/components/ui/Spinner';
 import { calendarService } from '@/services/calendar.service';
 import { authService } from '@/services/auth.service';
 import { formatDate } from '@/utils/format';
+import { useTranslation } from 'react-i18next';
 import type {
   CalendarDay,
   CalendarSummary,
@@ -19,25 +20,11 @@ import type {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-
 const DAY_TYPE_STYLES: Record<DayType, string> = {
   WORKING:      'bg-white text-gray-800 hover:bg-gray-50',
   WEEKEND:      'bg-gray-100 text-gray-500',
   HOLIDAY:      'bg-rose-100 text-rose-700 font-medium',
   COMPENSATION: 'bg-indigo-100 text-indigo-700 font-medium',
-};
-
-const DAY_TYPE_LABEL: Record<DayType, string> = {
-  WORKING:      'Working',
-  WEEKEND:      'Weekend',
-  HOLIDAY:      'Holiday',
-  COMPENSATION: 'Compensation',
 };
 
 const ADMIN_ROLES = new Set(['admin', 'hr']);
@@ -88,6 +75,13 @@ function LegendDot({ type }: { type: DayType }) {
 }
 
 function SummaryBar({ summary }: { summary: CalendarSummary }) {
+  const { t } = useTranslation();
+  const DAY_TYPE_LABEL: Record<DayType, string> = {
+    WORKING:      t('calendar.working'),
+    WEEKEND:      t('calendar.weekend'),
+    HOLIDAY:      t('calendar.holiday'),
+    COMPENSATION: t('calendar.compensation'),
+  };
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {(['WORKING', 'WEEKEND', 'HOLIDAY', 'COMPENSATION'] as DayType[]).map((type) => (
@@ -111,6 +105,14 @@ interface MonthGridProps {
 }
 
 function MonthGrid({ year, month, dayMap, today }: MonthGridProps) {
+  const { t } = useTranslation();
+  const DAY_LABELS: string[] = t('calendar.days', { returnObjects: true }) as string[];
+  const DAY_TYPE_LABEL: Record<DayType, string> = {
+    WORKING:      t('calendar.working'),
+    WEEKEND:      t('calendar.weekend'),
+    HOLIDAY:      t('calendar.holiday'),
+    COMPENSATION: t('calendar.compensation'),
+  };
   const dates = daysInMonth(year, month);
   const firstDay = firstDayOfMonth(year, month);
   const cells: (string | null)[] = [...Array(firstDay).fill(null), ...dates];
@@ -174,6 +176,7 @@ const EMPTY_HOLIDAY_FORM: HolidayForm = {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CalendarPage() {
+  const { t } = useTranslation();
   const user = authService.getCurrentUser();
   const isAdmin = ADMIN_ROLES.has(user?.role ?? '');
 
@@ -298,10 +301,10 @@ export default function CalendarPage() {
   }
 
   async function saveHoliday() {
-    if (!holidayForm.name.trim()) { setHolidayError('Name is required.'); return; }
-    if (!holidayForm.fromDate) { setHolidayError('From date is required.'); return; }
-    if (!holidayForm.toDate) { setHolidayError('To date is required.'); return; }
-    if (holidayForm.toDate < holidayForm.fromDate) { setHolidayError('To date must be on or after From date.'); return; }
+    if (!holidayForm.name.trim()) { setHolidayError(t('validation.nameRequired')); return; }
+    if (!holidayForm.fromDate) { setHolidayError(t('validation.fromDateRequired')); return; }
+    if (!holidayForm.toDate) { setHolidayError(t('validation.toDateRequired')); return; }
+    if (holidayForm.toDate < holidayForm.fromDate) { setHolidayError(t('validation.toDateAfterFrom')); return; }
 
     setHolidaySaving(true);
     setHolidayError('');
@@ -342,15 +345,17 @@ export default function CalendarPage() {
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
+  const MONTH_NAMES: string[] = t('calendar.months', { returnObjects: true }) as string[];
+
   return (
-    <AppShell title="Calendar">
+    <AppShell title={t('calendar.title')}>
       <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
 
         {/* ── Header ── */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Work Calendar</h1>
-            <p className="text-sm text-gray-500">Public holidays, weekends, and compensation days</p>
+            <h1 className="text-2xl font-bold text-gray-900">{t('calendar.workCalendar')}</h1>
+            <p className="text-sm text-gray-500">{t('calendar.workCalendarDesc')}</p>
           </div>
           {isAdmin && (
             <div className="flex items-center gap-2">
@@ -369,7 +374,7 @@ export default function CalendarPage() {
                 loading={generating}
                 onClick={handleGenerate}
               >
-                Generate {year}
+                {t('calendar.generate', { year })}
               </Button>
             </div>
           )}
@@ -422,15 +427,23 @@ export default function CalendarPage() {
 
           {/* Legend */}
           <div className="mt-4 flex flex-wrap gap-4 text-xs text-gray-500">
-            {(['WORKING', 'WEEKEND', 'HOLIDAY', 'COMPENSATION'] as DayType[]).map((type) => (
-              <span key={type} className="flex items-center gap-1.5">
-                <LegendDot type={type} />
-                {DAY_TYPE_LABEL[type]}
-              </span>
-            ))}
+            {(['WORKING', 'WEEKEND', 'HOLIDAY', 'COMPENSATION'] as DayType[]).map((type) => {
+              const LABEL: Record<DayType, string> = {
+                WORKING:      t('calendar.working'),
+                WEEKEND:      t('calendar.weekend'),
+                HOLIDAY:      t('calendar.holiday'),
+                COMPENSATION: t('calendar.compensation'),
+              };
+              return (
+                <span key={type} className="flex items-center gap-1.5">
+                  <LegendDot type={type} />
+                  {LABEL[type]}
+                </span>
+              );
+            })}
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-3 w-3 rounded-sm ring-2 ring-indigo-500" />
-              Today
+              {t('calendar.todayLegend')}
             </span>
           </div>
         </div>
@@ -439,11 +452,11 @@ export default function CalendarPage() {
         <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-semibold text-gray-800">
-              Public Holidays {year}
+              {t('calendar.publicHolidays', { year })}
             </h2>
             {isAdmin && (
               <Button size="sm" onClick={openCreate}>
-                + Add Holiday
+                {t('calendar.addHoliday')}
               </Button>
             )}
           </div>
@@ -454,7 +467,7 @@ export default function CalendarPage() {
             </div>
           ) : holidays.length === 0 ? (
             <p className="py-6 text-center text-sm text-gray-400">
-              No holidays configured for {year}.
+              {t('calendar.noHolidays', { year })}
             </p>
           ) : (
             <div className="divide-y divide-gray-50">
@@ -464,10 +477,10 @@ export default function CalendarPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium text-gray-800">{h.name}</span>
                       {h.isPaid && (
-                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Paid</span>
+                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">{t('calendar.paid')}</span>
                       )}
                       {h.isRecurring && (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">Recurring</span>
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">{t('calendar.recurring')}</span>
                       )}
                     </div>
                     <div className="mt-0.5 text-sm text-gray-500">
@@ -486,14 +499,14 @@ export default function CalendarPage() {
                         onClick={() => openEdit(h)}
                         className="text-xs text-indigo-600 hover:underline"
                       >
-                        Edit
+                        {t('common.edit')}
                       </button>
                       <button
                         onClick={() => deleteHoliday(h.id)}
                         disabled={deletingId === h.id}
                         className="text-xs text-red-500 hover:underline disabled:opacity-50"
                       >
-                        {deletingId === h.id ? 'Deleting...' : 'Delete'}
+                        {deletingId === h.id ? t('calendar.deleting') : t('common.delete')}
                       </button>
                     </div>
                   )}
@@ -508,15 +521,15 @@ export default function CalendarPage() {
       <Modal
         open={holidayModal !== null}
         onClose={closeHolidayModal}
-        title={holidayModal === 'edit' ? 'Edit Holiday' : 'Add Holiday'}
+        title={holidayModal === 'edit' ? t('calendar.editHoliday') : t('calendar.addHoliday')}
         size="md"
         footer={
           <>
             <Button variant="secondary" size="sm" onClick={closeHolidayModal}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button size="sm" loading={holidaySaving} onClick={saveHoliday}>
-              {holidayModal === 'edit' ? 'Save Changes' : 'Create Holiday'}
+              {holidayModal === 'edit' ? t('common.saveChanges') : t('calendar.createHoliday')}
             </Button>
           </>
         }
@@ -525,7 +538,7 @@ export default function CalendarPage() {
           {holidayError && <Alert variant="error" message={holidayError} />}
 
           <Input
-            label="Name"
+            label={t('calendar.holidayName')}
             placeholder="e.g. National Day"
             value={holidayForm.name}
             onChange={(e) => setHolidayForm((f) => ({ ...f, name: e.target.value }))}
@@ -533,13 +546,13 @@ export default function CalendarPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <Input
-              label="From Date"
+              label={t('calendar.fromDate')}
               type="date"
               value={holidayForm.fromDate}
               onChange={(e) => setHolidayForm((f) => ({ ...f, fromDate: e.target.value }))}
             />
             <Input
-              label="To Date"
+              label={t('calendar.toDate')}
               type="date"
               value={holidayForm.toDate}
               min={holidayForm.fromDate}
@@ -548,7 +561,7 @@ export default function CalendarPage() {
           </div>
 
           <Input
-            label="Description (optional)"
+            label={t('calendar.descriptionOptional')}
             placeholder="Brief note"
             value={holidayForm.description}
             onChange={(e) => setHolidayForm((f) => ({ ...f, description: e.target.value }))}
@@ -562,7 +575,7 @@ export default function CalendarPage() {
                 onChange={(e) => setHolidayForm((f) => ({ ...f, isPaid: e.target.checked }))}
                 className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
               />
-              Paid holiday
+              {t('calendar.paidHoliday')}
             </label>
             <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
               <input
@@ -571,7 +584,7 @@ export default function CalendarPage() {
                 onChange={(e) => setHolidayForm((f) => ({ ...f, isRecurring: e.target.checked }))}
                 className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
               />
-              Recurring every year
+              {t('calendar.recurringEveryYear')}
             </label>
           </div>
         </div>

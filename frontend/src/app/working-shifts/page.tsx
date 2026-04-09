@@ -9,6 +9,7 @@ import { Alert } from '@/components/ui/Alert';
 import { Modal } from '@/components/ui/Modal';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { useAuth } from '@/hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import { workingShiftService } from '@/services/working-shift.service';
 import { organizationService } from '@/services/organization.service';
 import type { Shift, Department } from '@/types';
@@ -18,9 +19,10 @@ import type { Shift, Department } from '@/types';
 function formatTime(t: string) { return t; }
 
 function CrossDayBadge() {
+  const { t } = useTranslation();
   return (
     <span className="ml-1.5 rounded bg-purple-100 px-1.5 py-0.5 text-xs font-medium text-purple-700">
-      crosses midnight
+      {t('workingShift.crossesMidnight')}
     </span>
   );
 }
@@ -69,6 +71,7 @@ const TIME_RE = /^\d{2}:\d{2}$/;
 const CODE_RE = /^[A-Z0-9_-]+$/;
 
 function ShiftModal({ open, onClose, shift, departments, onSuccess }: ShiftModalProps) {
+  const { t } = useTranslation();
   const isEdit = shift !== null;
 
   const [form, setForm]     = useState<FormState>(INITIAL_FORM);
@@ -113,14 +116,13 @@ function ShiftModal({ open, onClose, shift, departments, onSuccess }: ShiftModal
 
   function validate(): boolean {
     const errs: FormErrors = {};
-    if (!form.name.trim())                         errs.name = 'Name is required';
-    if (!form.code.trim())                         errs.code = 'Code is required';
-    else if (!CODE_RE.test(form.code))             errs.code = 'Uppercase letters, digits, underscores or hyphens only';
-    if (!form.startTime)                           errs.startTime = 'Start time is required';
+    if (!form.name.trim())                         errs.name = t('validation.nameRequired');
+    if (!form.code.trim())                         errs.code = t('validation.codeRequired');
+    else if (!CODE_RE.test(form.code))             errs.code = t('validation.codeRequired');
+    if (!form.startTime)                           errs.startTime = t('validation.dateRequired');
     else if (!TIME_RE.test(form.startTime))        errs.startTime = 'Must be HH:MM';
-    if (!form.endTime)                             errs.endTime = 'End time is required';
+    if (!form.endTime)                             errs.endTime = t('validation.dateRequired');
     else if (!TIME_RE.test(form.endTime))          errs.endTime = 'Must be HH:MM';
-    else if (form.startTime === form.endTime)      errs.endTime = 'Start and end time must differ';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -153,7 +155,7 @@ function ShiftModal({ open, onClose, shift, departments, onSuccess }: ShiftModal
       onClose();
     } catch (err: any) {
       const msg = err?.response?.data?.message;
-      setApiError(Array.isArray(msg) ? msg[0] : (msg ?? 'An error occurred'));
+      setApiError(Array.isArray(msg) ? msg[0] : (msg ?? t('workingShift.failedToSave')));
     } finally {
       setSaving(false);
     }
@@ -163,20 +165,20 @@ function ShiftModal({ open, onClose, shift, departments, onSuccess }: ShiftModal
     setForm((f) => ({ ...f, [field]: value }));
 
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? 'Edit Working Shift' : 'Add Working Shift'}>
+    <Modal open={open} onClose={onClose} title={isEdit ? t('workingShift.edit') : t('workingShift.add')}>
       <form onSubmit={handleSubmit} className="space-y-4">
         {apiError && <Alert variant="error" message={apiError} />}
 
         <div className="grid grid-cols-2 gap-4">
           <Input
-            label="Name *"
+            label={`${t('common.name')} *`}
             placeholder="e.g. Morning Shift"
             value={form.name}
             onChange={(e) => set('name', e.target.value)}
             error={errors.name}
           />
           <Input
-            label="Code *"
+            label={`${t('common.code')} *`}
             placeholder="e.g. CC_MORNING"
             value={form.code}
             onChange={(e) => set('code', e.target.value.toUpperCase())}
@@ -186,7 +188,7 @@ function ShiftModal({ open, onClose, shift, departments, onSuccess }: ShiftModal
 
         <div className="grid grid-cols-2 gap-4">
           <Input
-            label="Start Time *"
+            label={t('workingShift.startTime')}
             placeholder="08:00"
             value={form.startTime}
             onChange={(e) => set('startTime', e.target.value)}
@@ -194,23 +196,23 @@ function ShiftModal({ open, onClose, shift, departments, onSuccess }: ShiftModal
           />
           <div>
             <Input
-              label="End Time *"
+              label={t('workingShift.endTime')}
               placeholder="18:00"
               value={form.endTime}
               onChange={(e) => set('endTime', e.target.value)}
               error={errors.endTime}
             />
             {form.isCrossDay && (
-              <p className="mt-1 text-xs text-purple-600">Night shift — spans midnight</p>
+              <p className="mt-1 text-xs text-purple-600">{t('workingShift.nightShift')}</p>
             )}
           </div>
         </div>
 
         <Select
-          label="Department (leave blank for global shift)"
+          label={t('workingShift.departmentOptional')}
           value={form.departmentId}
           onChange={(e) => set('departmentId', e.target.value)}
-          placeholder="— Global (no department) —"
+          placeholder={t('workingShift.departmentGlobal')}
           options={departments.map((d) => ({
             value: d.id,
             label: `${d.name} (${d.code}) — ${d.workingType}`,
@@ -219,19 +221,19 @@ function ShiftModal({ open, onClose, shift, departments, onSuccess }: ShiftModal
 
         <div className="grid grid-cols-3 gap-3">
           <Input
-            label="Break (min)"
+            label={t('workingShift.breakMinutes')}
             type="number"
             value={form.breakMinutes}
             onChange={(e) => set('breakMinutes', e.target.value)}
           />
           <Input
-            label="Grace Late (min)"
+            label={t('workingShift.graceLateMinutes')}
             type="number"
             value={form.graceLateMinutes}
             onChange={(e) => set('graceLateMinutes', e.target.value)}
           />
           <Input
-            label="Grace Early-Out (min)"
+            label={t('workingShift.graceEarlyMinutes')}
             type="number"
             value={form.graceEarlyMinutes}
             onChange={(e) => set('graceEarlyMinutes', e.target.value)}
@@ -246,7 +248,7 @@ function ShiftModal({ open, onClose, shift, departments, onSuccess }: ShiftModal
               onChange={(e) => set('isDefault', e.target.checked)}
               className="h-4 w-4 rounded border-gray-300 text-indigo-600"
             />
-            Default shift (used as fallback for auto-detection)
+            {t('workingShift.isDefault')}
           </label>
           <label className="flex items-center gap-2 text-sm text-gray-700">
             <input
@@ -255,14 +257,14 @@ function ShiftModal({ open, onClose, shift, departments, onSuccess }: ShiftModal
               onChange={(e) => set('isActive', e.target.checked)}
               className="h-4 w-4 rounded border-gray-300 text-indigo-600"
             />
-            Active
+            {t('position.active')}
           </label>
         </div>
 
         <div className="flex justify-end gap-3 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="secondary" onClick={onClose}>{t('common.cancel')}</Button>
           <Button type="submit" loading={saving}>
-            {isEdit ? 'Save Changes' : 'Create Shift'}
+            {isEdit ? t('common.saveChanges') : t('workingShift.add')}
           </Button>
         </div>
       </form>
@@ -280,6 +282,7 @@ interface DeleteModalProps {
 }
 
 function DeleteModal({ open, onClose, shift, onSuccess }: DeleteModalProps) {
+  const { t } = useTranslation();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
 
@@ -295,27 +298,26 @@ function DeleteModal({ open, onClose, shift, onSuccess }: DeleteModalProps) {
       onClose();
     } catch (err: any) {
       const msg = err?.response?.data?.message;
-      setError(Array.isArray(msg) ? msg[0] : (msg ?? 'Delete failed'));
+      setError(Array.isArray(msg) ? msg[0] : (msg ?? t('workingShift.failedToSave')));
     } finally {
       setDeleting(false);
     }
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Delete Working Shift">
+    <Modal open={open} onClose={onClose} title={t('workingShift.delete')}>
       <div className="space-y-4">
         {error && <Alert variant="error" message={error} />}
         <p className="text-sm text-gray-600">
-          Delete shift{' '}
-          <span className="font-semibold text-gray-900">{shift?.name}</span>?
+          {t('position.deleteConfirm', { name: shift?.name ?? '' })}
         </p>
         <p className="text-xs text-gray-500">
-          Blocked if any employees are currently assigned to this shift.
+          {t('position.deleteBlocked')}
         </p>
         <div className="flex justify-end gap-3">
-          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="secondary" onClick={onClose}>{t('common.cancel')}</Button>
           <Button type="button" variant="danger" loading={deleting} onClick={handleDelete}>
-            Delete
+            {t('common.delete')}
           </Button>
         </div>
       </div>
@@ -326,6 +328,7 @@ function DeleteModal({ open, onClose, shift, onSuccess }: DeleteModalProps) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function WorkingShiftsPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const canEdit = user?.role === 'admin' || user?.role === 'hr';
 
@@ -354,11 +357,11 @@ export default function WorkingShiftsPage() {
       setShifts(shiftList);
       setDepartments(deptList);
     } catch {
-      setError('Failed to load working shifts');
+      setError(t('workingShift.failedToSave'));
     } finally {
       setLoading(false);
     }
-  }, [deptFilter]);
+  }, [deptFilter, t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -366,18 +369,17 @@ export default function WorkingShiftsPage() {
   function openEdit(s: Shift) { setSelected(s); setModalOpen(true); }
   function openDelete(s: Shift) { setSelected(s); setDeleteOpen(true); }
 
-  if (loading) return <AppShell title="Working Shifts"><PageSpinner /></AppShell>;
+  if (loading) return <AppShell title={t('workingShift.title')}><PageSpinner /></AppShell>;
 
   return (
-    <AppShell title="Working Shifts">
+    <AppShell title={t('workingShift.title')}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Working Shifts</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t('workingShift.title')}</h1>
             <p className="text-sm text-gray-500">
-              {shifts.length} shift{shifts.length !== 1 && 's'}
-              {deptFilter && ' for selected department'}
+              {shifts.length} {t('workingShift.title').toLowerCase()}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -386,7 +388,7 @@ export default function WorkingShiftsPage() {
               onChange={(e) => setDeptFilter(e.target.value)}
               className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-500 focus:outline-none"
             >
-              <option value="">All shifts</option>
+              <option value="">{t('workingShift.allShifts')}</option>
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name} ({d.code})
@@ -394,7 +396,7 @@ export default function WorkingShiftsPage() {
               ))}
             </select>
             {canEdit && (
-              <Button onClick={openCreate}>+ Add Shift</Button>
+              <Button onClick={openCreate}>{t('workingShift.add')}</Button>
             )}
           </div>
         </div>
@@ -403,9 +405,9 @@ export default function WorkingShiftsPage() {
 
         {shifts.length === 0 ? (
           <div className="rounded-xl border border-dashed border-gray-300 py-16 text-center">
-            <p className="text-gray-500">No shifts found.</p>
+            <p className="text-gray-500">{t('workingShift.noData')}</p>
             {canEdit && (
-              <Button className="mt-4" onClick={openCreate}>Create a shift</Button>
+              <Button className="mt-4" onClick={openCreate}>{t('workingShift.createFirst')}</Button>
             )}
           </div>
         ) : (
@@ -413,15 +415,15 @@ export default function WorkingShiftsPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
-                  <th className="px-5 py-3 text-left">Name</th>
-                  <th className="px-5 py-3 text-left">Code</th>
-                  <th className="px-5 py-3 text-left">Time</th>
-                  <th className="px-5 py-3 text-left">Department</th>
-                  <th className="px-5 py-3 text-right">Break</th>
-                  <th className="px-5 py-3 text-right">Grace Late</th>
-                  <th className="px-5 py-3 text-center">Default</th>
-                  <th className="px-5 py-3 text-center">Status</th>
-                  {canEdit && <th className="px-5 py-3 text-right">Actions</th>}
+                  <th className="px-5 py-3 text-left">{t('workingShift.colName')}</th>
+                  <th className="px-5 py-3 text-left">{t('workingShift.colCode')}</th>
+                  <th className="px-5 py-3 text-left">{t('workingShift.colTime')}</th>
+                  <th className="px-5 py-3 text-left">{t('workingShift.colDepartment')}</th>
+                  <th className="px-5 py-3 text-right">{t('workingShift.colBreak')}</th>
+                  <th className="px-5 py-3 text-right">{t('workingShift.colGraceLate')}</th>
+                  <th className="px-5 py-3 text-center">{t('workingShift.colDefault')}</th>
+                  <th className="px-5 py-3 text-center">{t('workingShift.colStatus')}</th>
+                  {canEdit && <th className="px-5 py-3 text-right">{t('workingShift.colActions')}</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -446,7 +448,7 @@ export default function WorkingShiftsPage() {
                           <span className="text-xs text-gray-400">({s.department.code})</span>
                         </span>
                       ) : (
-                        <span className="text-xs text-indigo-600 font-medium">Global</span>
+                        <span className="text-xs text-indigo-600 font-medium">{t('workingShift.global')}</span>
                       )}
                     </td>
                     <td className="px-5 py-3 text-right text-gray-500">
@@ -458,18 +460,18 @@ export default function WorkingShiftsPage() {
                     <td className="px-5 py-3 text-center">
                       {s.isDefault && (
                         <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
-                          Default
+                          {t('workingShift.colDefault')}
                         </span>
                       )}
                     </td>
                     <td className="px-5 py-3 text-center">
                       {s.isActive ? (
                         <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                          Active
+                          {t('common.active')}
                         </span>
                       ) : (
                         <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">
-                          Inactive
+                          {t('common.inactive')}
                         </span>
                       )}
                     </td>
@@ -480,7 +482,7 @@ export default function WorkingShiftsPage() {
                             onClick={() => openEdit(s)}
                             className="rounded px-2.5 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50"
                           >
-                            Edit
+                            {t('common.edit')}
                           </button>
                           {user?.role === 'admin' && (
                             <button
@@ -489,11 +491,11 @@ export default function WorkingShiftsPage() {
                               disabled={(s._count?.currentEmployees ?? 0) > 0}
                               title={
                                 (s._count?.currentEmployees ?? 0) > 0
-                                  ? 'Cannot delete — employees assigned'
-                                  : 'Delete shift'
+                                  ? t('workingShift.cannotDeleteEmployees')
+                                  : t('workingShift.delete')
                               }
                             >
-                              Delete
+                              {t('common.delete')}
                             </button>
                           )}
                         </div>

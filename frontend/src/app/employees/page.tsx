@@ -12,11 +12,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { isAdminOrHR } from '@/utils/rbac';
 import { EmployeeTable } from '@/modules/employee/EmployeeTable';
 import { CreateEmployeeModal } from '@/modules/employee/CreateEmployeeModal';
+import { useTranslation } from 'react-i18next';
 import type { Employee, PaginatedResponse } from '@/types';
 
 export default function EmployeesPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const role = user?.role;
   const canSeeAll = isAdminOrHR(role);
@@ -66,7 +68,7 @@ export default function EmployeesPage() {
   // Don't render the full page for employees (they'll be redirected)
   if (role === 'employee') return null;
 
-  const pageTitle = isManager ? 'My Team' : 'Employees';
+  const pageTitle = isManager ? t('employee.myTeam') : t('employee.title');
 
   return (
     <AppShell title={pageTitle}>
@@ -76,7 +78,7 @@ export default function EmployeesPage() {
         {isManager && (
           <Alert
             variant="info"
-            message={`Showing your direct reports only. Switch to HR view to see all employees.`}
+            message={t('employee.managerBanner')}
           />
         )}
 
@@ -85,38 +87,38 @@ export default function EmployeesPage() {
           <form onSubmit={handleSearch} className="flex flex-wrap items-end gap-3">
             <div className="w-64">
               <Input
-                label="Search"
-                placeholder="Name, email or code..."
+                label={t('common.search')}
+                placeholder={t('employee.searchPlaceholder')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700">Status</label>
+              <label className="block text-sm font-medium text-gray-700">{t('common.status')}</label>
               <select
                 value={statusFilter}
                 onChange={(e) => { setStatusFilter(e.target.value); reset(); }}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                <option value="">All</option>
-                <option value="probation">Probation</option>
-                <option value="official">Official</option>
-                <option value="resigned">Resigned</option>
-                <option value="inactive">Inactive</option>
+                <option value="">{t('common.all')}</option>
+                <option value="probation">{t('status.probation')}</option>
+                <option value="official">{t('status.official')}</option>
+                <option value="resigned">{t('status.resigned')}</option>
+                <option value="inactive">{t('status.inactive')}</option>
               </select>
             </div>
-            <Button type="submit" variant="secondary">Search</Button>
+            <Button type="submit" variant="secondary">{t('common.search')}</Button>
             <Button
               type="button"
               variant="ghost"
               onClick={() => { setSearch(''); setStatusFilter(''); reset(); }}
             >
-              Clear
+              {t('common.clear')}
             </Button>
             {canSeeAll && (
               <div className="ml-auto">
                 <Button type="button" onClick={() => setShowModal(true)}>
-                  + Add Employee
+                  {t('employee.addEmployee')}
                 </Button>
               </div>
             )}
@@ -127,10 +129,10 @@ export default function EmployeesPage() {
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
             <h3 className="text-base font-semibold text-gray-800">
-              {isManager ? 'Your Team' : 'All Employees'}
+              {isManager ? t('employee.yourTeam') : t('employee.allEmployees')}
               {result && (
                 <span className="ml-2 text-sm font-normal text-gray-400">
-                  ({result.meta.total} total)
+                  ({result.meta.total} {t('common.total')})
                 </span>
               )}
             </h3>

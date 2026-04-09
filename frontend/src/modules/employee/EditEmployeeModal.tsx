@@ -1,20 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Alert } from '@/components/ui/Alert';
 import { employeeService } from '@/services/employee.service';
+import { leaveService } from '@/services/leave.service';
 import { organizationService } from '@/services/organization.service';
-import type { Employee, Branch, Department, Position } from '@/types';
+import type { Employee, Branch, Department, Position, LeaveBalance } from '@/types';
 
 interface EditEmployeeModalProps {
   open: boolean;
   onClose: () => void;
   employee: Employee;
-  onSuccess: (updated: Employee) => void;
+  leaveBalance?: LeaveBalance | null;
+  canEditBalance?: boolean;
+  onSuccess: (updated: Employee, newBalance?: LeaveBalance) => void;
 }
 
 interface FormState {
@@ -27,12 +31,14 @@ interface FormState {
   departmentId: string;
   positionId: string;
   telegramId: string;
+  initialLeaveBalance: string;
 }
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
-export function EditEmployeeModal({ open, onClose, employee, onSuccess }: EditEmployeeModalProps) {
-  const [form, setForm]         = useState<FormState>({ fullName: '', email: '', phone: '', status: '', role: '', branchId: '', departmentId: '', positionId: '', telegramId: '' });
+export function EditEmployeeModal({ open, onClose, employee, leaveBalance, canEditBalance = false, onSuccess }: EditEmployeeModalProps) {
+  const { t } = useTranslation();
+  const [form, setForm]         = useState<FormState>({ fullName: '', email: '', phone: '', status: '', role: '', branchId: '', departmentId: '', positionId: '', telegramId: '', initialLeaveBalance: '' });
   const [errors, setErrors]     = useState<FormErrors>({});
   const [apiError, setApiError] = useState('');
   const [saving, setSaving]     = useState(false);
@@ -47,15 +53,16 @@ export function EditEmployeeModal({ open, onClose, employee, onSuccess }: EditEm
   useEffect(() => {
     if (!open) return;
     setForm({
-      fullName:     employee.fullName     ?? '',
-      email:        employee.email        ?? '',
-      phone:        employee.phone        ?? '',
-      status:       employee.status       ?? 'probation',
-      role:         employee.role         ?? 'employee',
-      branchId:     String(employee.branchId     ?? ''),
-      departmentId: String(employee.departmentId ?? ''),
-      positionId:   String(employee.positionId   ?? ''),
-      telegramId:   employee.telegramId         ?? '',
+      fullName:            employee.fullName     ?? '',
+      email:               employee.email        ?? '',
+      phone:               employee.phone        ?? '',
+      status:              employee.status       ?? 'probation',
+      role:                employee.role         ?? 'employee',
+      branchId:            String(employee.branchId     ?? ''),
+      departmentId:        String(employee.departmentId ?? ''),
+      positionId:          String(employee.positionId   ?? ''),
+      telegramId:          employee.telegramId         ?? '',
+      initialLeaveBalance: String(leaveBalance?.total ?? ''),
     });
     setErrors({});
     setApiError('');
@@ -101,14 +108,14 @@ export function EditEmployeeModal({ open, onClose, employee, onSuccess }: EditEm
 
   function validate(): boolean {
     const errs: FormErrors = {};
-    if (!form.fullName.trim()) errs.fullName = 'Name is required';
+    if (!form.fullName.trim()) errs.fullName = t('validation.nameRequired');
     if (!form.email.trim()) {
-      errs.email = 'Email is required';
+      errs.email = t('validation.emailRequired');
     } else if (!/\S+@\S+\.\S+/.test(form.email)) {
-      errs.email = 'Invalid email address';
+      errs.email = t('validation.emailInvalid');
     }
     if (form.phone && !/^[+\d\s\-().]{7,20}$/.test(form.phone)) {
-      errs.phone = 'Invalid phone number';
+      errs.phone = t('validation.phoneInvalid');
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -132,78 +139,87 @@ export function EditEmployeeModal({ open, onClose, employee, onSuccess }: EditEm
         positionId:   form.positionId   ? Number(form.positionId)   : undefined,
         telegramId:   form.telegramId || undefined,
       });
-      onSuccess(updated);
+
+      let newBalance: LeaveBalance | undefined;
+      if (canEditBalance && form.initialLeaveBalance !== '') {
+        const newTotal = Number(form.initialLeaveBalance);
+        if (newTotal !== leaveBalance?.total) {
+          newBalance = await leaveService.setBalance(employee.id, { total: newTotal });
+        }
+      }
+
+      onSuccess(updated, newBalance);
       onClose();
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string | string[] } } })
           ?.response?.data?.message;
-      setApiError(Array.isArray(msg) ? msg[0] : (msg ?? 'Failed to update employee'));
+      setApiError(Array.isArray(msg) ? msg[0] : (msg ?? t('employee.failedToUpdate')));
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Edit Employee" size="md">
+    <Modal open={open} onClose={onClose} title={t('employee.editEmployee')} size="md">
       <form onSubmit={handleSubmit} className="space-y-5">
         {apiError && <Alert variant="error" message={apiError} />}
 
         {/* ── Basic info ─────────────────────────────────────── */}
         <fieldset className="space-y-4">
           <legend className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Basic Info
+            {t('employee.basicInfo')}
           </legend>
           <Input
-            label="Full Name *"
+            label={t('profile.fullNameRequired')}
             value={form.fullName}
             onChange={(e) => set('fullName', e.target.value)}
             error={errors.fullName}
           />
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Email *"
+              label={t('profile.emailRequired')}
               type="email"
               value={form.email}
               onChange={(e) => set('email', e.target.value)}
               error={errors.email}
             />
             <Input
-              label="Phone"
+              label={t('common.phone')}
               type="tel"
-              placeholder="Optional"
+              placeholder={t('common.optional')}
               value={form.phone}
               onChange={(e) => set('phone', e.target.value)}
               error={errors.phone}
             />
           </div>
           <Input
-            label="Telegram ID (optional)"
-            placeholder="@username or ID"
+            label={t('employee.telegramLabel')}
+            placeholder={t('employee.telegramPlaceholder')}
             value={form.telegramId}
             onChange={(e) => set('telegramId', e.target.value)}
           />
           <div className="grid grid-cols-2 gap-4">
             <Select
-              label="Status"
+              label={t('common.status')}
               value={form.status}
               onChange={(e) => set('status', e.target.value)}
               options={[
-                { value: 'probation', label: 'Probation' },
-                { value: 'official',  label: 'Official' },
-                { value: 'resigned',  label: 'Resigned' },
-                { value: 'inactive',  label: 'Inactive' },
+                { value: 'probation', label: t('status.probation') },
+                { value: 'official',  label: t('status.official') },
+                { value: 'resigned',  label: t('status.resigned') },
+                { value: 'inactive',  label: t('status.inactive') },
               ]}
             />
             <Select
-              label="Role"
+              label={t('common.role')}
               value={form.role}
               onChange={(e) => set('role', e.target.value)}
               options={[
-                { value: 'employee', label: 'Employee' },
-                { value: 'manager',  label: 'Manager' },
-                { value: 'hr',       label: 'HR' },
-                { value: 'admin',    label: 'Admin' },
+                { value: 'employee', label: t('role.employee') },
+                { value: 'manager',  label: t('role.manager') },
+                { value: 'hr',       label: t('role.hr') },
+                { value: 'admin',    label: t('role.admin') },
               ]}
             />
           </div>
@@ -214,33 +230,33 @@ export function EditEmployeeModal({ open, onClose, employee, onSuccess }: EditEm
         {/* ── Organisation ───────────────────────────────────── */}
         <fieldset className="space-y-4">
           <legend className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Organisation
+            {t('employee.organization')}
           </legend>
           <Select
-            label="Branch"
+            label={t('common.branch')}
             value={form.branchId}
             onChange={(e) => set('branchId', e.target.value)}
             options={[
-              { value: '', label: '— Select branch —' },
+              { value: '', label: t('employee.selectBranch') },
               ...branches.map((b) => ({ value: String(b.id), label: b.name })),
             ]}
           />
           <div className="grid grid-cols-2 gap-4">
             <Select
-              label={loadingDepts ? 'Department (loading…)' : 'Department'}
+              label={loadingDepts ? t('employee.loadingDepartment') : t('common.department')}
               value={form.departmentId}
               onChange={(e) => set('departmentId', e.target.value)}
               options={[
-                { value: '', label: '— Select department —' },
+                { value: '', label: t('employee.selectDepartment') },
                 ...departments.map((d) => ({ value: String(d.id), label: d.name })),
               ]}
             />
             <Select
-              label={loadingPos ? 'Position (loading…)' : 'Position'}
+              label={loadingPos ? t('employee.loadingPosition') : t('common.position')}
               value={form.positionId}
               onChange={(e) => set('positionId', e.target.value)}
               options={[
-                { value: '', label: '— Select position —' },
+                { value: '', label: t('employee.selectPosition') },
                 ...positions.map((p) => ({ value: String(p.id), label: p.name })),
               ]}
             />
@@ -249,23 +265,48 @@ export function EditEmployeeModal({ open, onClose, employee, onSuccess }: EditEm
 
         <hr className="border-gray-100" />
 
+        {/* ── Leave Balance ──────────────────────────────────── */}
+        <fieldset className="space-y-4">
+          <legend className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            {t('employee.leaveBalance')}
+          </legend>
+          {canEditBalance ? (
+            <Input
+              label={t('employee.initialLeaveBalance')}
+              type="number"
+              placeholder="e.g. 12"
+              value={form.initialLeaveBalance}
+              onChange={(e) => set('initialLeaveBalance', e.target.value)}
+            />
+          ) : (
+            <div>
+              <p className="text-xs text-gray-400">{t('employee.initialLeaveBalance')}</p>
+              <p className="mt-0.5 text-sm font-medium text-gray-700">
+                {leaveBalance != null ? leaveBalance.total : '—'}
+              </p>
+            </div>
+          )}
+        </fieldset>
+
+        <hr className="border-gray-100" />
+
         {/* ── Read-only ──────────────────────────────────────── */}
         <fieldset>
           <legend className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">
-            Read-only
+            {t('employee.readOnly')}
           </legend>
           <div>
-            <p className="text-xs text-gray-400">Employee Code</p>
+            <p className="text-xs text-gray-400">{t('employee.employeeCode')}</p>
             <p className="mt-0.5 text-sm font-medium text-gray-500">{employee.code ?? '—'}</p>
           </div>
         </fieldset>
 
         <div className="flex justify-end gap-3 pt-1">
           <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" loading={saving}>
-            Save Changes
+            {t('common.saveChanges')}
           </Button>
         </div>
       </form>

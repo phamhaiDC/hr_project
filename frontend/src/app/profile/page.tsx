@@ -8,10 +8,12 @@ import { Alert } from '@/components/ui/Alert';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { ChangePasswordModal } from '@/modules/employee/ChangePasswordModal';
 import { EmployeeAvatar } from '@/modules/employee/EmployeeAvatar';
+import { useTranslation } from 'react-i18next';
 import { employeeService } from '@/services/employee.service';
+import { leaveService } from '@/services/leave.service';
 import { statusBadge } from '@/components/ui/Badge';
 import { capitalise, formatDate } from '@/utils/format';
-import type { Employee } from '@/types';
+import type { Employee, LeaveBalance } from '@/types';
 
 interface FormState {
   fullName: string;
@@ -22,9 +24,11 @@ interface FormState {
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
 export default function ProfilePage() {
-  const [employee, setEmployee] = useState<Employee | null>(null);
-  const [loading, setLoading]   = useState(true);
-  const [fetchError, setFetchError] = useState('');
+  const { t } = useTranslation();
+  const [employee, setEmployee]       = useState<Employee | null>(null);
+  const [leaveBalance, setLeaveBalance] = useState<LeaveBalance | null>(null);
+  const [loading, setLoading]         = useState(true);
+  const [fetchError, setFetchError]   = useState('');
 
   const [form, setForm]         = useState<FormState>({ fullName: '', email: '', phone: '' });
   const [errors, setErrors]     = useState<FormErrors>({});
@@ -40,8 +44,12 @@ export default function ProfilePage() {
       setLoading(true);
       setFetchError('');
       try {
-        const me = await employeeService.getMe();
+        const [me, balanceData] = await Promise.all([
+          employeeService.getMe(),
+          leaveService.balance().catch(() => null),
+        ]);
         setEmployee(me);
+        setLeaveBalance(balanceData?.balance ?? null);
         setForm({
           fullName: me.fullName ?? '',
           email:    me.email    ?? '',
@@ -104,18 +112,18 @@ export default function ProfilePage() {
     }
   }
 
-  if (loading) return <AppShell title="My Profile"><PageSpinner /></AppShell>;
+  if (loading) return <AppShell title={t('profile.title')}><PageSpinner /></AppShell>;
 
   if (fetchError || !employee) {
     return (
-      <AppShell title="My Profile">
-        <Alert variant="error" message={fetchError || 'Profile not found.'} />
+      <AppShell title={t('profile.title')}>
+        <Alert variant="error" message={fetchError || t('common.error')} />
       </AppShell>
     );
   }
 
   return (
-    <AppShell title="My Profile">
+    <AppShell title={t('profile.title')}>
       <div className="mx-auto max-w-2xl space-y-6">
 
         {/* Hero card */}
@@ -136,40 +144,40 @@ export default function ProfilePage() {
           </div>
           <div className="hidden shrink-0 text-right sm:block">
             <p className="font-mono text-lg font-bold text-indigo-600">{employee.code}</p>
-            <p className="text-xs text-gray-400">Employee Code</p>
+            <p className="text-xs text-gray-400">{t('profile.employeeCode')}</p>
           </div>
         </div>
 
         {/* Edit form */}
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h3 className="mb-5 text-sm font-semibold uppercase tracking-wide text-gray-700">
-            Edit Profile
+            {t('profile.editProfile')}
           </h3>
 
           {apiError && <Alert variant="error" message={apiError} className="mb-4" />}
           {saved && (
-            <Alert variant="success" message="Profile updated successfully." className="mb-4" />
+            <Alert variant="success" message={t('profile.updateSuccess')} className="mb-4" />
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
-              label="Full Name *"
+              label={t('profile.fullNameRequired')}
               value={form.fullName}
               onChange={(e) => set('fullName', e.target.value)}
               error={errors.fullName}
             />
             <div className="grid grid-cols-2 gap-4">
               <Input
-                label="Email *"
+                label={t('profile.emailRequired')}
                 type="email"
                 value={form.email}
                 onChange={(e) => set('email', e.target.value)}
                 error={errors.email}
               />
               <Input
-                label="Phone"
+                label={t('common.phone')}
                 type="tel"
-                placeholder="Optional"
+                placeholder={t('common.optional')}
                 value={form.phone}
                 onChange={(e) => set('phone', e.target.value)}
                 error={errors.phone}
@@ -182,10 +190,10 @@ export default function ProfilePage() {
                 variant="secondary"
                 onClick={() => setPwOpen(true)}
               >
-                Change Password
+                {t('profile.changePassword')}
               </Button>
               <Button type="submit" loading={saving} disabled={!dirty}>
-                Update Profile
+                {t('profile.updateProfile')}
               </Button>
             </div>
           </form>
@@ -194,16 +202,17 @@ export default function ProfilePage() {
         {/* Read-only work info */}
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-700">
-            Work Information
+            {t('profile.workInfo')}
           </h3>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
             {[
-              { label: 'Employee Code', value: <span className="font-mono">{employee.code}</span> },
-              { label: 'Role',          value: capitalise(employee.role ?? '') },
-              { label: 'Department',    value: employee.department?.name ?? '—' },
-              { label: 'Position',      value: employee.position?.name ?? '—' },
-              { label: 'Branch',        value: employee.branch?.name ?? '—' },
-              { label: 'Join Date',     value: formatDate(employee.joinDate) },
+              { label: t('profile.employeeCode'),        value: <span className="font-mono">{employee.code}</span> },
+              { label: t('common.role'),                 value: capitalise(employee.role ?? '') },
+              { label: t('common.department'),           value: employee.department?.name ?? '—' },
+              { label: t('common.position'),             value: employee.position?.name ?? '—' },
+              { label: t('common.branch'),               value: employee.branch?.name ?? '—' },
+              { label: t('profile.joinDate'),            value: formatDate(employee.joinDate) },
+              { label: t('profile.initialLeaveBalance'), value: leaveBalance != null ? String(leaveBalance.total) : '—' },
             ].map(({ label, value }) => (
               <div key={label}>
                 <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">{label}</dt>

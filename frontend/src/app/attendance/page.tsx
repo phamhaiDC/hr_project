@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -44,15 +45,16 @@ function fmtDistance(m: number): string {
 // ─── WFM status badges ─────────────────────────────────────────────────────────
 
 function WfmBadges({ record }: { record: AttendanceRecord }) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-wrap gap-1">
-      {record.isLate && <Badge label="Late" variant="danger" />}
-      {record.isEarlyOut && <Badge label="Early Out" variant="warning" />}
+      {record.isLate && <Badge label={t('attendance.late')} variant="danger" />}
+      {record.isEarlyOut && <Badge label={t('attendance.earlyOut')} variant="warning" />}
       {record.isOvertime && (
         <Badge label={`OT ${Number(record.overtimeHours).toFixed(1)}h`} variant="info" />
       )}
       {!record.isLate && !record.isEarlyOut && !record.isOvertime && record.checkinTime && (
-        <Badge label="On Time" variant="success" />
+        <Badge label={t('attendance.onTime')} variant="success" />
       )}
     </div>
   );
@@ -116,6 +118,7 @@ function GpsCheckIn({
   branches,
   confirmedBranch,
 }: GpsCheckInProps) {
+  const { t } = useTranslation();
   // Compute live preview from client-side Haversine (before check-in)
   let officeResult: OfficeResult | null = null;
 
@@ -170,7 +173,7 @@ function GpsCheckIn({
       {/* Header row */}
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-          GPS Location
+          {t('attendance.gpsLocation')}
         </p>
         <button
           onClick={retry}
@@ -179,7 +182,7 @@ function GpsCheckIn({
           aria-label="Retry GPS"
         >
           <RetryIcon spinning={loading} />
-          Retry
+          {t('common.retry')}
         </button>
       </div>
 
@@ -187,7 +190,7 @@ function GpsCheckIn({
       {loading && (
         <div className="flex items-center gap-2.5 rounded-lg border border-gray-200 bg-white px-3 py-3 text-sm text-gray-500">
           <Spinner className="h-4 w-4 shrink-0 text-indigo-500" />
-          <span>Acquiring GPS position…</span>
+          <span>{t('attendance.acquiringGps')}</span>
         </div>
       )}
 
@@ -200,7 +203,7 @@ function GpsCheckIn({
                 d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
             </svg>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-amber-800">Location unavailable</p>
+              <p className="text-sm font-medium text-amber-800">{t('attendance.locationUnavailable')}</p>
               <p className="mt-1 text-xs text-amber-700 whitespace-pre-line leading-relaxed">{error}</p>
             </div>
           </div>
@@ -209,7 +212,7 @@ function GpsCheckIn({
             className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-amber-100 px-3 py-2.5 text-sm font-medium text-amber-800 hover:bg-amber-200 transition-colors min-h-[44px]"
           >
             <RetryIcon />
-            Try again
+            {t('attendance.tryAgain')}
           </button>
         </div>
       )}
@@ -218,15 +221,15 @@ function GpsCheckIn({
       {!loading && !error && lat != null && (
         <div className="grid grid-cols-3 gap-2 text-xs">
           <div className="rounded-lg border border-gray-100 bg-white px-2 py-2 text-center">
-            <p className="text-gray-400 mb-0.5">Latitude</p>
+            <p className="text-gray-400 mb-0.5">{t('attendance.latitude')}</p>
             <p className="font-mono font-medium text-gray-800">{lat.toFixed(6)}</p>
           </div>
           <div className="rounded-lg border border-gray-100 bg-white px-2 py-2 text-center">
-            <p className="text-gray-400 mb-0.5">Longitude</p>
+            <p className="text-gray-400 mb-0.5">{t('attendance.longitude')}</p>
             <p className="font-mono font-medium text-gray-800">{lng?.toFixed(6)}</p>
           </div>
           <div className="rounded-lg border border-gray-100 bg-white px-2 py-2 text-center">
-            <p className="text-gray-400 mb-0.5">Accuracy</p>
+            <p className="text-gray-400 mb-0.5">{t('attendance.accuracy')}</p>
             <p className="font-medium text-gray-800">±{accuracy}m</p>
           </div>
         </div>
@@ -263,22 +266,22 @@ function GpsCheckIn({
                   <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                   </svg>
-                  IN OFFICE
+                  {t('attendance.inOfficePill')}
                 </>
               ) : (
                 <>
                   <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  OUTSIDE
+                  {t('attendance.outsidePill')}
                 </>
               )}
             </span>
           </div>
           <p className={`mt-1.5 text-xs ${isInOffice ? 'text-emerald-600' : 'text-red-600'}`}>
-            {fmtDistance(officeResult.distanceM)} from office
+            {fmtDistance(officeResult.distanceM)} {t('attendance.fromOffice')}
             {officeResult.confirmed && (
-              <span className="ml-1.5 text-gray-400">(verified at check-in)</span>
+              <span className="ml-1.5 text-gray-400">{t('attendance.verifiedAtCheckin')}</span>
             )}
           </p>
         </div>
@@ -319,14 +322,14 @@ function GpsCheckIn({
                     <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                     </svg>
-                    IN OFFICE
+                    {t('attendance.inOfficePill')}
                   </>
                 ) : (
                   <>
                     <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                     </svg>
-                    OUTSIDE
+                    {t('attendance.outsidePill')}
                   </>
                 )}
               </span>
@@ -337,18 +340,18 @@ function GpsCheckIn({
               nearestBranchResult.isInOffice ? 'text-emerald-600' : 'text-red-600'
             }`}>
               {nearestBranchResult.isInOffice
-                ? `Nearest branch: ${nearestBranchResult.name} · ${fmtDistance(nearestBranchResult.distanceM)}`
-                : `Outside office · ${fmtDistance(nearestBranchResult.distanceM)} away`
+                ? `${t('attendance.nearestBranch')}: ${nearestBranchResult.name} · ${fmtDistance(nearestBranchResult.distanceM)}`
+                : `${t('attendance.outsideOfficeDist')} · ${fmtDistance(nearestBranchResult.distanceM)} ${t('attendance.away')}`
               }
               {nearestBranchResult.confirmed && (
-                <span className="ml-1.5 text-gray-400">(verified at check-in)</span>
+                <span className="ml-1.5 text-gray-400">{t('attendance.verifiedAtCheckin')}</span>
               )}
             </p>
           </div>
         ) : (
           // GPS acquired but no branches have GPS coordinates configured
           <p className="text-xs text-gray-400 text-center py-1">
-            GPS acquired — no branches with GPS configured
+            {t('attendance.gpsNoBranches')}
           </p>
         )
       )}
@@ -361,7 +364,7 @@ function GpsCheckIn({
               d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          Checked in without GPS — recorded as <span className="ml-1 font-semibold text-gray-600">NO_LOCATION</span>
+          {t('attendance.noLocationBadge')}
         </div>
       )}
     </div>
@@ -372,6 +375,7 @@ function GpsCheckIn({
 
 export default function AttendancePage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const geo = useGeolocation();
 
   // HTTPS detection (geolocation requires secure context on mobile)
@@ -520,7 +524,7 @@ export default function AttendancePage() {
 
     // When GPS is not confirmed a reason is mandatory — validate client-side first
     if (needsReason && !locationNote.trim()) {
-      setNoteError('Please enter a reason to continue');
+      setNoteError(t('attendance.pleaseEnterReason'));
       noteRef.current?.focus();
       return;
     }
@@ -568,7 +572,7 @@ export default function AttendancePage() {
     setActionMsg(null);
 
     if (needsReason && !locationNote.trim()) {
-      setNoteError('Please enter a reason to continue');
+      setNoteError(t('attendance.pleaseEnterReason'));
       noteRef.current?.focus();
       return;
     }
@@ -615,7 +619,7 @@ export default function AttendancePage() {
   const todayRecord = todayStatus?.attendance;
 
   return (
-    <AppShell title="Attendance">
+    <AppShell title={t('attendance.title')}>
       <div className="space-y-6">
 
         {/* ── HTTPS warning ── */}
@@ -626,8 +630,8 @@ export default function AttendancePage() {
                 d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
             </svg>
             <p>
-              <span className="font-semibold">Insecure connection detected.</span>{' '}
-              Location services only work over HTTPS on mobile devices. GPS check-in may not be available.
+              <span className="font-semibold">{t('attendance.httpsWarning')}</span>{' '}
+              {t('attendance.httpsWarningDesc')}
             </p>
           </div>
         )}
@@ -635,7 +639,7 @@ export default function AttendancePage() {
         {/* ── My Attendance Panel ── */}
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-100 px-6 py-4">
-            <h3 className="text-base font-semibold text-gray-800">My Attendance — Today</h3>
+            <h3 className="text-base font-semibold text-gray-800">{t('attendance.myAttendanceToday')}</h3>
           </div>
 
           {/* Grid is always rendered so the GPS panel and action buttons are
@@ -649,7 +653,7 @@ export default function AttendancePage() {
               {/* Today stats — gated on todayLoading only here */}
               {todayLoading ? (
                 <div className="grid grid-cols-2 gap-3 text-sm animate-pulse">
-                  {['Check-in', 'Check-out', 'Working Hours', 'Shift'].map((lbl) => (
+                  {[t('attendance.checkinLabel'), t('attendance.checkoutLabel'), t('attendance.workingHoursLabel'), t('attendance.shiftLabel')].map((lbl) => (
                     <div key={lbl} className="rounded-lg bg-gray-50 px-4 py-3">
                       <p className="text-xs text-gray-400 mb-1">{lbl}</p>
                       <div className="h-4 w-20 rounded bg-gray-200" />
@@ -660,25 +664,25 @@ export default function AttendancePage() {
                 <>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div className="rounded-lg bg-gray-50 px-4 py-3">
-                      <p className="text-xs text-gray-400 mb-1">Check-in</p>
+                      <p className="text-xs text-gray-400 mb-1">{t('attendance.checkinLabel')}</p>
                       <p className="font-medium text-gray-800">
                         {todayRecord?.checkinTime ? formatDateTime(todayRecord.checkinTime) : '—'}
                       </p>
                     </div>
                     <div className="rounded-lg bg-gray-50 px-4 py-3">
-                      <p className="text-xs text-gray-400 mb-1">Check-out</p>
+                      <p className="text-xs text-gray-400 mb-1">{t('attendance.checkoutLabel')}</p>
                       <p className="font-medium text-gray-800">
                         {todayRecord?.checkoutTime ? formatDateTime(todayRecord.checkoutTime) : '—'}
                       </p>
                     </div>
                     <div className="rounded-lg bg-gray-50 px-4 py-3">
-                      <p className="text-xs text-gray-400 mb-1">Working Hours</p>
+                      <p className="text-xs text-gray-400 mb-1">{t('attendance.workingHoursLabel')}</p>
                       <p className="font-medium text-gray-800">
                         {todayRecord?.workingHours ? formatHours(todayRecord.workingHours) : '—'}
                       </p>
                     </div>
                     <div className="rounded-lg bg-gray-50 px-4 py-3">
-                      <p className="text-xs text-gray-400 mb-1">Shift</p>
+                      <p className="text-xs text-gray-400 mb-1">{t('attendance.shiftLabel')}</p>
                       <p className="font-medium text-gray-800 truncate">
                         {todayRecord?.shift
                           ? `${todayRecord.shift.name} (${todayRecord.shift.startTime}–${todayRecord.shift.endTime})`
@@ -712,23 +716,23 @@ export default function AttendancePage() {
                           </svg>
                           <p className="text-sm font-medium text-amber-800">
                             {isOutside
-                              ? 'Outside authorized location — reason required'
+                              ? t('attendance.outsideLocation')
                               : geo.status === 'acquiring'
-                                ? 'Acquiring position… provide a reason if you cannot wait'
-                                : 'Location not available — reason required'}
+                                ? t('attendance.acquiringPosition')
+                                : t('attendance.locationNotAvailable')}
                           </p>
                         </div>
 
                         {/* Reason textarea */}
                         <div>
                           <label className="mb-1 block text-xs font-medium text-amber-800">
-                            Reason for check-in {isOutside ? 'from outside' : 'without location'}
+                            {isOutside ? t('attendance.reasonForCheckinOutside') : t('attendance.reasonForCheckinNoGps')}
                           </label>
                           <textarea
                             ref={noteRef}
                             value={locationNote}
                             onChange={(e) => { setLocationNote(e.target.value); setNoteError(''); }}
-                            placeholder={isOutside ? "e.g. Meeting at client site, working remotely…" : "e.g. GPS unavailable indoors, poor signal…"}
+                            placeholder={isOutside ? t('attendance.checkInPlaceholderOutside') : t('attendance.checkInPlaceholderGps')}
                             rows={2}
                             className="w-full resize-none rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
                           />
@@ -751,7 +755,7 @@ export default function AttendancePage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                           d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                       </svg>
-                      Check In
+                      {t('attendance.checkIn')}
                     </Button>
                   </div>
                 ) : !checkedOut ? (
@@ -766,19 +770,19 @@ export default function AttendancePage() {
                           </svg>
                           <p className="text-sm font-medium text-amber-800">
                             {isOutside
-                              ? 'Outside authorized location — reason required'
-                              : 'Location not available — reason required'}
+                              ? t('attendance.outsideLocation')
+                              : t('attendance.locationNotAvailable')}
                           </p>
                         </div>
                         <div>
                           <label className="mb-1 block text-xs font-medium text-amber-800">
-                            Reason for check-out
+                            {t('attendance.reasonForCheckout')}
                           </label>
                           <textarea
                             ref={noteRef}
                             value={locationNote}
                             onChange={(e) => { setLocationNote(e.target.value); setNoteError(''); }}
-                            placeholder="e.g. Finished meeting at client site, working remotely…"
+                            placeholder={t('attendance.checkoutPlaceholder')}
                             rows={2}
                             className="w-full resize-none rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
                           />
@@ -799,7 +803,7 @@ export default function AttendancePage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                           d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                       </svg>
-                      Check Out
+                      {t('attendance.checkOut')}
                     </Button>
                   </div>
                 ) : (
@@ -808,7 +812,7 @@ export default function AttendancePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                         d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Attendance complete for today
+                    {t('attendance.completeForToday')}
                   </div>
                 )}
               </div>
@@ -833,7 +837,7 @@ export default function AttendancePage() {
         {/* ── My History ── */}
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-100 px-6 py-4">
-            <h3 className="text-base font-semibold text-gray-800">My Attendance History</h3>
+            <h3 className="text-base font-semibold text-gray-800">{t('attendance.myHistory')}</h3>
           </div>
 
           {myLoading ? (
@@ -844,13 +848,13 @@ export default function AttendancePage() {
                 <table className="w-full text-sm">
                   <thead className="border-b border-gray-100 bg-gray-50 text-xs font-medium uppercase tracking-wide text-gray-500">
                     <tr>
-                      <th className="px-6 py-3 text-left">Date</th>
-                      <th className="px-6 py-3 text-left">Shift</th>
-                      <th className="px-6 py-3 text-left">Check-in</th>
-                      <th className="px-6 py-3 text-left">Check-out</th>
-                      <th className="px-6 py-3 text-left">Hours</th>
-                      <th className="px-6 py-3 text-left">Status</th>
-                      <th className="px-6 py-3 text-left">Notes</th>
+                      <th className="px-6 py-3 text-left">{t('common.date')}</th>
+                      <th className="px-6 py-3 text-left">{t('attendance.shiftLabel')}</th>
+                      <th className="px-6 py-3 text-left">{t('attendance.checkinLabel')}</th>
+                      <th className="px-6 py-3 text-left">{t('attendance.checkoutLabel')}</th>
+                      <th className="px-6 py-3 text-left">{t('reports.colHours')}</th>
+                      <th className="px-6 py-3 text-left">{t('common.status')}</th>
+                      <th className="px-6 py-3 text-left">{t('common.notes')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -877,7 +881,7 @@ export default function AttendancePage() {
                                   ? 'bg-emerald-50 text-emerald-700'
                                   : 'bg-red-50 text-red-600'
                               }`}>
-                                {rec.isInOffice ? 'In Office' : 'Outside'}
+                                {rec.isInOffice ? t('attendance.inOfficeLabel') : t('attendance.outsideLabel')}
                               </span>
                             )}
                           </div>
@@ -894,7 +898,7 @@ export default function AttendancePage() {
                                 <span className="font-bold text-gray-400">OUT:</span> {rec.checkoutNote}
                               </div>
                             )}
-                            {!rec.checkinNote && !rec.checkoutNote && <span className="text-gray-300 italic uppercase tracking-widest text-[9px]">None</span>}
+                            {!rec.checkinNote && !rec.checkoutNote && <span className="text-gray-300 italic uppercase tracking-widest text-[9px]">{t('common.noData')}</span>}
                           </div>
                         </td>
                       </tr>
@@ -902,7 +906,7 @@ export default function AttendancePage() {
                     {myRecords?.data.length === 0 && (
                       <tr>
                         <td colSpan={7} className="px-6 py-12 text-center text-sm text-gray-400">
-                          No attendance records yet
+                          {t('attendance.noRecordsYet')}
                         </td>
                       </tr>
                     )}
@@ -927,7 +931,7 @@ export default function AttendancePage() {
         {isManager && (
           <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
             <div className="border-b border-gray-100 px-6 py-4">
-              <h3 className="text-base font-semibold text-gray-800">Attendance Report</h3>
+              <h3 className="text-base font-semibold text-gray-800">{t('attendance.attendanceReport')}</h3>
             </div>
 
             {/* Filters */}
@@ -940,11 +944,11 @@ export default function AttendancePage() {
                 }}
                 className="flex flex-wrap items-end gap-3"
               >
-                <Input label="From Date" type="date" value={dateFrom}
+                <Input label={t('reports.fromDate')} type="date" value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)} />
-                <Input label="To Date" type="date" value={dateTo}
+                <Input label={t('reports.toDate')} type="date" value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)} />
-                <Button type="submit" variant="secondary">Filter</Button>
+                <Button type="submit" variant="secondary">{t('common.filter')}</Button>
                 <Button type="button" variant="ghost"
                   onClick={() => {
                     setDateFrom('');
@@ -952,7 +956,7 @@ export default function AttendancePage() {
                     setActiveFilter({ dateFrom: '', dateTo: '' });
                     reset();
                   }}>
-                  Clear
+                  {t('common.clear')}
                 </Button>
               </form>
             </div>
@@ -962,13 +966,13 @@ export default function AttendancePage() {
               <div className="grid grid-cols-2 gap-4 border-b border-gray-100 p-4">
                 <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 text-center">
                   <p className="text-2xl font-bold text-gray-900">{report.summary.totalRecords}</p>
-                  <p className="text-sm text-gray-500">Total Records</p>
+                  <p className="text-sm text-gray-500">{t('reports.totalRecords')}</p>
                 </div>
                 <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 text-center">
                   <p className="text-2xl font-bold text-gray-900">
                     {Number(report.summary.totalWorkingHours).toFixed(1)}
                   </p>
-                  <p className="text-sm text-gray-500">Total Working Hours</p>
+                  <p className="text-sm text-gray-500">{t('reports.totalWorkingHours')}</p>
                 </div>
               </div>
             )}
@@ -981,13 +985,13 @@ export default function AttendancePage() {
                   <table className="w-full text-sm">
                     <thead className="border-b border-gray-100 bg-gray-50 text-xs font-medium uppercase tracking-wide text-gray-500">
                       <tr>
-                        <th className="px-6 py-3 text-left">Employee</th>
-                        <th className="px-6 py-3 text-left">Date</th>
-                        <th className="px-6 py-3 text-left">Shift</th>
-                        <th className="px-6 py-3 text-left">Check-in</th>
-                        <th className="px-6 py-3 text-left">Check-out</th>
-                        <th className="px-6 py-3 text-left">Hours</th>
-                        <th className="px-6 py-3 text-left">Status</th>
+                        <th className="px-6 py-3 text-left">{t('reports.colEmployee')}</th>
+                        <th className="px-6 py-3 text-left">{t('common.date')}</th>
+                        <th className="px-6 py-3 text-left">{t('attendance.shiftLabel')}</th>
+                        <th className="px-6 py-3 text-left">{t('attendance.checkinLabel')}</th>
+                        <th className="px-6 py-3 text-left">{t('attendance.checkoutLabel')}</th>
+                        <th className="px-6 py-3 text-left">{t('reports.colHours')}</th>
+                        <th className="px-6 py-3 text-left">{t('common.status')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -1010,7 +1014,7 @@ export default function AttendancePage() {
                       {report?.data.length === 0 && (
                         <tr>
                           <td colSpan={7} className="px-6 py-12 text-center text-sm text-gray-400">
-                            No records found for the selected period
+                            {t('attendance.noRecordsForPeriod')}
                           </td>
                         </tr>
                       )}

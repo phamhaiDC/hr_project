@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
 import { Table, type Column } from '@/components/ui/Table';
 import { Pagination } from '@/components/ui/Pagination';
 import { statusBadge } from '@/components/ui/Badge';
@@ -18,66 +19,6 @@ interface EmployeeTableProps {
   onGoTo: (p: number) => void;
 }
 
-const COLUMNS: Column<Employee>[] = [
-  {
-    key: 'employee',
-    header: 'Employee',
-    render: (emp) => (
-      <div className="flex items-center gap-3">
-        <EmployeeAvatar name={emp.fullName ?? 'U'} size="md" />
-        <div>
-          <p className="font-medium text-gray-900">{emp.fullName}</p>
-          <p className="text-xs text-gray-400">{emp.email}</p>
-        </div>
-      </div>
-    ),
-  },
-  {
-    key: 'code',
-    header: 'Code',
-    render: (emp) => (
-      <span className="font-mono text-xs text-gray-500">{emp.code ?? '—'}</span>
-    ),
-    headerClassName: 'hidden sm:table-cell',
-    cellClassName: 'hidden sm:table-cell',
-  },
-  {
-    key: 'department',
-    header: 'Department',
-    render: (emp) => <span className="text-gray-600">{emp.department?.name ?? '—'}</span>,
-  },
-  {
-    key: 'position',
-    header: 'Position',
-    render: (emp) => <span className="text-gray-600">{emp.position?.name ?? '—'}</span>,
-    headerClassName: 'hidden md:table-cell',
-    cellClassName: 'hidden md:table-cell',
-  },
-  {
-    key: 'role',
-    header: 'Role',
-    render: (emp) => (
-      <span className="text-gray-600">{capitalise(emp.role ?? '')}</span>
-    ),
-    headerClassName: 'hidden lg:table-cell',
-    cellClassName: 'hidden lg:table-cell',
-  },
-  {
-    key: 'status',
-    header: 'Status',
-    render: (emp) => statusBadge(emp.status),
-  },
-  {
-    key: 'joined',
-    header: 'Joined',
-    render: (emp) => (
-      <span className="text-gray-500">{formatDate(emp.joinDate)}</span>
-    ),
-    headerClassName: 'hidden xl:table-cell',
-    cellClassName: 'hidden xl:table-cell',
-  },
-];
-
 export function EmployeeTable({
   result,
   loading,
@@ -88,6 +29,67 @@ export function EmployeeTable({
   onGoTo,
 }: EmployeeTableProps) {
   const router = useRouter();
+  const { t } = useTranslation();
+
+  const COLUMNS: Column<Employee>[] = [
+    {
+      key: 'employee',
+      header: t('employee.colEmployee'),
+      render: (emp) => (
+        <div className="flex items-center gap-3">
+          <EmployeeAvatar name={emp.fullName ?? 'U'} size="md" />
+          <div>
+            <p className="font-medium text-gray-900">{emp.fullName}</p>
+            <p className="text-xs text-gray-400">{emp.email}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'code',
+      header: t('employee.colCode'),
+      render: (emp) => (
+        <span className="font-mono text-xs text-gray-500">{emp.code ?? '—'}</span>
+      ),
+      headerClassName: 'hidden sm:table-cell',
+      cellClassName: 'hidden sm:table-cell',
+    },
+    {
+      key: 'department',
+      header: t('employee.colDepartment'),
+      render: (emp) => <span className="text-gray-600">{emp.department?.name ?? '—'}</span>,
+    },
+    {
+      key: 'position',
+      header: t('employee.colPosition'),
+      render: (emp) => <span className="text-gray-600">{emp.position?.name ?? '—'}</span>,
+      headerClassName: 'hidden md:table-cell',
+      cellClassName: 'hidden md:table-cell',
+    },
+    {
+      key: 'role',
+      header: t('employee.colRole'),
+      render: (emp) => (
+        <span className="text-gray-600">{capitalise(emp.role ?? '')}</span>
+      ),
+      headerClassName: 'hidden lg:table-cell',
+      cellClassName: 'hidden lg:table-cell',
+    },
+    {
+      key: 'status',
+      header: t('employee.colStatus'),
+      render: (emp) => statusBadge(emp.status),
+    },
+    {
+      key: 'joined',
+      header: t('employee.colJoined'),
+      render: (emp) => (
+        <span className="text-gray-500">{formatDate(emp.joinDate)}</span>
+      ),
+      headerClassName: 'hidden xl:table-cell',
+      cellClassName: 'hidden xl:table-cell',
+    },
+  ];
 
   return (
     <>
@@ -96,7 +98,7 @@ export function EmployeeTable({
         data={result?.data ?? []}
         loading={loading}
         keyExtractor={(emp) => emp.id}
-        emptyMessage="No employees found. Try adjusting your filters."
+        emptyMessage={t('employee.noEmployeesFound')}
         onRowClick={(emp) => router.push(`/employees/${emp.id}`)}
       />
       {result && result.meta.totalPages > 1 && (

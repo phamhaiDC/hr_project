@@ -9,6 +9,7 @@ import { statusBadge } from '@/components/ui/Badge';
 import { employeeService } from '@/services/employee.service';
 import { leaveService } from '@/services/leave.service';
 import { contractService } from '@/services/contract.service';
+import { useTranslation } from 'react-i18next';
 import { formatDate, daysUntil } from '@/utils/format';
 import type { Employee, LeaveRequest, Contract } from '@/types';
 
@@ -49,6 +50,7 @@ const EXPIRY_WINDOW_DAYS = 30;
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [probationEmployees, setProbationEmployees] = useState<Employee[]>([]);
@@ -160,13 +162,12 @@ export default function DashboardPage() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <AppShell title="Dashboard">
+    <AppShell title={t('dashboard.title')}>
       {loading ? (
         <PageSpinner />
       ) : (
         <div className="space-y-6">
 
-          {/* ── Top-level error (employee fetch failed) ── */}
           {errors.employees && (
             <Alert variant="error" message={errors.employees} />
           )}
@@ -174,7 +175,7 @@ export default function DashboardPage() {
           {/* ── Stat Cards ── */}
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard
-              label="Total Employees"
+              label={t('dashboard.totalEmployees')}
               value={stats?.totalEmployees ?? 0}
               color="indigo"
               icon={
@@ -185,10 +186,10 @@ export default function DashboardPage() {
               }
             />
             <StatCard
-              label="Pending Leave Requests"
+              label={t('dashboard.pendingLeave')}
               value={stats?.pendingLeaveCount ?? 0}
               color="amber"
-              sub={errors.leaves ? 'Restricted' : undefined}
+              sub={errors.leaves ? t('dashboard.restricted') : undefined}
               icon={
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -197,7 +198,7 @@ export default function DashboardPage() {
               }
             />
             <StatCard
-              label="On Probation"
+              label={t('dashboard.onProbation')}
               value={stats?.probationCount ?? 0}
               color="rose"
               icon={
@@ -208,10 +209,10 @@ export default function DashboardPage() {
               }
             />
             <StatCard
-              label={`Contracts Expiring (≤${EXPIRY_WINDOW_DAYS}d)`}
+              label={t('dashboard.contractsExpiring', { n: EXPIRY_WINDOW_DAYS })}
               value={stats?.expiringContractCount ?? 0}
               color={stats && stats.expiringContractCount > 0 ? 'rose' : 'emerald'}
-              sub={errors.contracts ? 'Failed to load' : undefined}
+              sub={errors.contracts ? t('common.failedToLoad') : undefined}
               icon={
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -227,7 +228,7 @@ export default function DashboardPage() {
             {/* Probation Employees */}
             <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
               <div className="border-b border-gray-100 px-6 py-4">
-                <h3 className="text-base font-semibold text-gray-800">Employees on Probation</h3>
+                <h3 className="text-base font-semibold text-gray-800">{t('dashboard.employeesOnProbation')}</h3>
               </div>
               <div className="divide-y divide-gray-50">
                 {probationEmployees.length > 0 ? (
@@ -241,7 +242,7 @@ export default function DashboardPage() {
                         <p className="truncate text-xs text-gray-400">
                           {emp.department?.name ?? '—'}
                           {emp.probationEndDate
-                            ? ` · Ends ${formatDate(emp.probationEndDate)}`
+                            ? ` · ${t('dashboard.probationEnds', { date: formatDate(emp.probationEndDate) })}`
                             : ''}
                         </p>
                       </div>
@@ -250,7 +251,7 @@ export default function DashboardPage() {
                   ))
                 ) : (
                   <p className="px-6 py-8 text-center text-sm text-gray-400">
-                    No employees on probation
+                    {t('dashboard.noProbationEmployees')}
                   </p>
                 )}
               </div>
@@ -259,7 +260,7 @@ export default function DashboardPage() {
             {/* Pending Leave Requests */}
             <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
               <div className="border-b border-gray-100 px-6 py-4">
-                <h3 className="text-base font-semibold text-gray-800">Pending Leave Requests</h3>
+                <h3 className="text-base font-semibold text-gray-800">{t('dashboard.pendingLeaveRequests')}</h3>
               </div>
               {errors.leaves ? (
                 <div className="p-4">
@@ -278,13 +279,13 @@ export default function DashboardPage() {
                         </div>
                         <p className="mt-0.5 text-xs text-gray-400">
                           {formatDate(leave.fromDate)} → {formatDate(leave.toDate)}
-                          {leave.days ? ` · ${leave.days} day(s)` : ''}
+                          {leave.days ? ` · ${leave.days} ${t('common.day')}` : ''}
                         </p>
                       </div>
                     ))
                   ) : (
                     <p className="px-6 py-8 text-center text-sm text-gray-400">
-                      No pending leave requests
+                      {t('dashboard.noPendingLeave')}
                     </p>
                   )}
                 </div>
@@ -304,7 +305,7 @@ export default function DashboardPage() {
                       d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                   <h3 className="text-base font-semibold text-amber-800">
-                    Contracts Expiring Within {EXPIRY_WINDOW_DAYS} Days
+                    {t('dashboard.contractsExpiringTitle', { n: EXPIRY_WINDOW_DAYS })}
                   </h3>
                 </div>
               </div>
@@ -318,7 +319,10 @@ export default function DashboardPage() {
                           {contract.employee?.fullName ?? `Employee #${contract.employeeId}`}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {contract.type ?? 'Contract'} · Expires {formatDate(contract.endDate)}
+                          {t('dashboard.contractType', {
+                            type: contract.type ?? t('common.contract'),
+                            date: formatDate(contract.endDate),
+                          })}
                         </p>
                       </div>
                       <span
@@ -328,7 +332,7 @@ export default function DashboardPage() {
                             : 'bg-amber-100 text-amber-700'
                         }`}
                       >
-                        {days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days}d left`}
+                        {days === 0 ? t('common.today') : days === 1 ? t('common.tomorrow') : t('common.dLeft', { d: days })}
                       </span>
                     </div>
                   );

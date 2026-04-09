@@ -9,19 +9,21 @@ import { Badge } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Select';
 import { attendanceService } from '@/services/attendance.service';
 import { useAuth } from '@/hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import { formatDate, formatDateTime, formatHours } from '@/utils/format';
 import type { AttendanceRecord, PaginatedResponse } from '@/types';
 
 // ─── Status Badge Helper ──────────────────────────────────────────────────────
 
 function AttendanceStatus({ record }: { record: AttendanceRecord }) {
+  const { t } = useTranslation();
   const statusArr = [];
-  if (record.isLate) statusArr.push({ label: 'Late', variant: 'danger' as const });
-  if (record.isEarlyOut) statusArr.push({ label: 'Early Out', variant: 'warning' as const });
+  if (record.isLate) statusArr.push({ label: t('attendance.late'), variant: 'danger' as const });
+  if (record.isEarlyOut) statusArr.push({ label: t('attendance.earlyOut'), variant: 'warning' as const });
   if (record.isOvertime) statusArr.push({ label: `OT ${Number(record.overtimeHours).toFixed(1)}h`, variant: 'info' as const });
-  
+
   if (statusArr.length === 0 && record.checkinTime) {
-    return <Badge label="Normal" variant="success" />;
+    return <Badge label={t('attendance.normal')} variant="success" />;
   }
 
   return (
@@ -35,6 +37,7 @@ function AttendanceStatus({ record }: { record: AttendanceRecord }) {
 
 export default function AttendanceReportPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<AttendanceRecord[]>([]);
   const [total, setTotal] = useState(0);
@@ -148,10 +151,10 @@ export default function AttendanceReportPage() {
       key: 'employee',
       header: (
         <div className="space-y-2">
-          <span>Employee</span>
-          <Input 
-            className="h-8 text-xs font-normal" 
-            placeholder="Search name..." 
+          <span>{t('reports.colEmployee')}</span>
+          <Input
+            className="h-8 text-xs font-normal"
+            placeholder={t('reports.searchName')}
             value={searchInput.employeeName}
             onChange={e => setSearchInput({ ...searchInput, employeeName: e.target.value })}
             onBlur={() => {
@@ -167,9 +170,9 @@ export default function AttendanceReportPage() {
               }
             }}
           />
-          <Input 
-            className="h-8 text-xs font-normal" 
-            placeholder="Search code..." 
+          <Input
+            className="h-8 text-xs font-normal"
+            placeholder={t('reports.searchCode')}
             value={searchInput.employeeCode}
             onChange={e => setSearchInput({ ...searchInput, employeeCode: e.target.value })}
             onBlur={() => {
@@ -196,7 +199,7 @@ export default function AttendanceReportPage() {
     },
     {
       key: 'date',
-      header: 'Day',
+      header: t('reports.colDay'),
       render: (r) => (
         <div className="font-medium text-gray-600">
           {formatDate(r.date)}
@@ -205,7 +208,7 @@ export default function AttendanceReportPage() {
     },
     {
       key: 'checkinTime',
-      header: 'Check-in',
+      header: t('reports.colCheckin'),
       render: (r) => (
         <div className="flex flex-col">
           <span className="font-medium">{r.checkinTime ? formatDateTime(r.checkinTime).split(' ')[1] : '--:--'}</span>
@@ -215,7 +218,7 @@ export default function AttendanceReportPage() {
     },
     {
       key: 'checkoutTime',
-      header: 'Check-out',
+      header: t('reports.colCheckout'),
       render: (r) => (
         <div className="flex flex-col">
           <span className="font-medium">{r.checkoutTime ? formatDateTime(r.checkoutTime).split(' ')[1] : '--:--'}</span>
@@ -225,7 +228,7 @@ export default function AttendanceReportPage() {
     },
     {
       key: 'workingHours',
-      header: 'Hours',
+      header: t('reports.colHours'),
       render: (r) => (
         <span className="font-mono font-bold text-indigo-600">
           {r.workingHours ? Number(r.workingHours).toFixed(2) : '0.00'}h
@@ -236,15 +239,15 @@ export default function AttendanceReportPage() {
       key: 'status',
       header: (
         <div className="space-y-2">
-          <span>Status</span>
+          <span>{t('reports.colStatus')}</span>
           <div className="flex gap-1">
              <label className="flex items-center gap-1 text-[10px] whitespace-nowrap cursor-pointer">
                 <input type="checkbox" checked={!!filters.isLate} onChange={e => { setFilters(f => ({ ...f, isLate: e.target.checked ? true : undefined })); setPage(1); }} />
-                Late
+                {t('reports.lateFilter')}
              </label>
              <label className="flex items-center gap-1 text-[10px] whitespace-nowrap cursor-pointer">
                 <input type="checkbox" checked={!!filters.isEarlyOut} onChange={e => { setFilters(f => ({ ...f, isEarlyOut: e.target.checked ? true : undefined })); setPage(1); }} />
-                Early
+                {t('reports.earlyFilter')}
              </label>
           </div>
         </div>
@@ -256,35 +259,35 @@ export default function AttendanceReportPage() {
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <AppShell title="Attendance Report">
+    <AppShell title={t('reports.attendance')}>
       <div className="space-y-6">
         
         {/* ── Filter Bar ── */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
           <div className="space-y-1">
-            <label className="text-xs font-bold uppercase text-gray-400">From Date</label>
+            <label className="text-xs font-bold uppercase text-gray-400">{t('reports.fromDate')}</label>
             <Input type="date" value={filters.dateFrom} onChange={e => { setFilters(f => ({ ...f, dateFrom: e.target.value })); setPage(1); }} />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-bold uppercase text-gray-400">To Date</label>
+            <label className="text-xs font-bold uppercase text-gray-400">{t('reports.toDate')}</label>
             <Input type="date" value={filters.dateTo} onChange={e => { setFilters(f => ({ ...f, dateTo: e.target.value })); setPage(1); }} />
           </div>
           <div className="flex flex-col justify-end gap-2">
             <div className="flex gap-2">
-              <Button size="sm" variant="secondary" className="text-[10px] h-7 px-2" onClick={() => applyDateRange(0)}>Current Month</Button>
-              <Button size="sm" variant="secondary" className="text-[10px] h-7 px-2" onClick={() => applyDateRange(1)}>Last Month</Button>
-              <Button size="sm" variant="secondary" className="text-[10px] h-7 px-2" onClick={() => applyDateRange(2)}>Last 2 Months</Button>
+              <Button size="sm" variant="secondary" className="text-[10px] h-7 px-2" onClick={() => applyDateRange(0)}>{t('reports.currentMonth')}</Button>
+              <Button size="sm" variant="secondary" className="text-[10px] h-7 px-2" onClick={() => applyDateRange(1)}>{t('reports.lastMonth')}</Button>
+              <Button size="sm" variant="secondary" className="text-[10px] h-7 px-2" onClick={() => applyDateRange(2)}>{t('reports.lastTwoMonths')}</Button>
             </div>
           </div>
           <div className="flex items-end justify-end gap-4">
             <Button variant="secondary" onClick={() => { setFilters({ dateFrom: '', dateTo: '', employeeName: '', employeeCode: '', q: '', isLate: undefined, isEarlyOut: undefined }); setPage(1); }}>
-              Reset
+              {t('reports.reset')}
             </Button>
             <Button onClick={handleExport} className="bg-emerald-600 hover:bg-emerald-700">
                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                </svg>
-               Export Excel
+               {t('reports.exportExcel')}
             </Button>
           </div>
         </div>
@@ -293,12 +296,12 @@ export default function AttendanceReportPage() {
         <div className="flex items-center gap-8 bg-indigo-50 p-4 rounded-xl border border-indigo-100 overflow-hidden relative">
             <div className="absolute right-0 top-0 h-full w-32 bg-indigo-100/50 skew-x-[-20deg] translate-x-12" />
             <div>
-              <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Total Working Hours</p>
+              <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest">{t('reports.totalWorkingHours')}</p>
               <p className="text-2xl font-black text-indigo-700">{summary.totalWorkingHours.toFixed(2)}h</p>
             </div>
             <div className="h-10 w-px bg-indigo-200" />
             <div>
-              <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Total Records</p>
+              <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest">{t('reports.totalRecords')}</p>
               <p className="text-2xl font-black text-indigo-700">{total}</p>
             </div>
         </div>
@@ -315,7 +318,7 @@ export default function AttendanceReportPage() {
           {/* ── Pagination ── */}
           <div className="px-6 py-4 border-t border-gray-50 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-500">Rows per page:</span>
+              <span className="text-sm text-gray-500">{t('common.rowsPerPage')}:</span>
               <select 
                 title="Rows per page"
                 aria-label="Rows per page"
@@ -332,17 +335,17 @@ export default function AttendanceReportPage() {
 
             <div className="flex items-center gap-4">
                <div className="flex items-center gap-1">
-                  <Button size="sm" variant="secondary" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Prev</Button>
+                  <Button size="sm" variant="secondary" disabled={page === 1} onClick={() => setPage(p => p - 1)}>{t('reports.prev')}</Button>
                   <div className="flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-lg text-sm font-medium">
                     <span className="text-indigo-600">{page}</span>
                     <span className="text-gray-400">/</span>
                     <span className="text-gray-500">{totalPages || 1}</span>
                   </div>
-                  <Button size="sm" variant="secondary" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(p => p + 1)}>Next</Button>
+                  <Button size="sm" variant="secondary" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(p => p + 1)}>{t('reports.next')}</Button>
                </div>
                
                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500">Go to:</span>
+                  <span className="text-sm text-gray-500">{t('reports.goTo')}</span>
                   <input 
                     type="number" 
                     title="Go to page"

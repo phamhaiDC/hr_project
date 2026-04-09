@@ -79,4 +79,10 @@ export class UpdateEmployeeDto {
   @IsOptional()
   @IsString()
   telegramId?: string;
+
+  @ApiPropertyOptional({ example: 12, description: 'Initial leave balance (admin/HR only)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  initialLeaveBalance?: number;
 }

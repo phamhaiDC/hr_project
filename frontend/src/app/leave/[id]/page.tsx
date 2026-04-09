@@ -12,12 +12,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatDate, formatDateTime, capitalise } from '@/utils/format';
 import { LeaveTimeline } from '@/modules/leave/LeaveTimeline';
 import { RejectModal } from '@/modules/leave/RejectModal';
+import { useTranslation } from 'react-i18next';
 import type { LeaveRequest } from '@/types';
 
 export default function LeaveDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const [leave, setLeave] = useState<LeaveRequest | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,14 +94,14 @@ export default function LeaveDetailPage() {
     }
   }
 
-  if (loading) return <AppShell title="Leave Request"><PageSpinner /></AppShell>;
+  if (loading) return <AppShell title={t('leave.leaveRequestDetail')}><PageSpinner /></AppShell>;
 
   if (!leave && error) {
     return (
-      <AppShell title="Leave Request">
+      <AppShell title={t('leave.leaveRequestDetail')}>
         <div className="p-6 space-y-4">
           <Alert message={error} />
-          <Button variant="secondary" onClick={() => router.back()}>Go Back</Button>
+          <Button variant="secondary" onClick={() => router.back()}>{t('common.goBack')}</Button>
         </div>
       </AppShell>
     );
@@ -108,7 +110,7 @@ export default function LeaveDetailPage() {
   if (!leave) return null;
 
   return (
-    <AppShell title="Leave Request Detail">
+    <AppShell title={t('leave.leaveRequestDetail')}>
       <div className="space-y-5 max-w-3xl">
         {error && <Alert message={error} />}
 
@@ -120,7 +122,7 @@ export default function LeaveDetailPage() {
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
-          Back to Leave
+          {t('leave.backToLeave')}
         </button>
 
         {/* Header card */}
@@ -129,13 +131,13 @@ export default function LeaveDetailPage() {
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 <h2 className="text-lg font-bold text-gray-900">
-                  Leave Request #{leave.id}
+                  {t('leave.leaveRequestTitle', { id: leave.id })}
                 </h2>
                 {statusBadge(leave.status)}
                 {statusBadge(leave.type)}
               </div>
               <p className="text-sm text-gray-500">
-                Submitted on {formatDateTime(leave.createdAt)}
+                {t('leave.submittedOn', { date: formatDateTime(leave.createdAt) })}
               </p>
             </div>
 
@@ -149,14 +151,14 @@ export default function LeaveDetailPage() {
                       loading={actionLoading}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white border-0"
                     >
-                      Approve
+                      {t('leave.approve')}
                     </Button>
                     <Button
                       variant="danger"
                       onClick={() => setShowReject(true)}
                       disabled={actionLoading}
                     >
-                      Reject
+                      {t('leave.reject')}
                     </Button>
                   </>
                 )}
@@ -166,7 +168,7 @@ export default function LeaveDetailPage() {
                     onClick={handleCancel}
                     loading={actionLoading}
                   >
-                    Cancel Request
+                    {t('leave.cancelRequest')}
                   </Button>
                 )}
               </div>
@@ -179,44 +181,44 @@ export default function LeaveDetailPage() {
           {/* Request info */}
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Request Details
+              {t('leave.requestDetails')}
             </h3>
             <dl className="space-y-3">
-              <Row label="Leave Type" value={capitalise(leave.type)} />
-              <Row label="From" value={formatDate(leave.fromDate)} />
-              <Row label="To" value={formatDate(leave.toDate)} />
+              <Row label={t('leave.leaveType')} value={capitalise(leave.type)} />
+              <Row label={t('common.from')} value={formatDate(leave.fromDate)} />
+              <Row label={t('common.to')} value={formatDate(leave.toDate)} />
               <Row
-                label="Duration"
-                value={`${leave.days} day${leave.days !== 1 ? 's' : ''}`}
+                label={t('leave.duration')}
+                value={t('leave.durationDays', { n: leave.days })}
               />
-              <Row label="Status" value={statusBadge(leave.status)} />
-              <Row label="Current Step" value={`${leave.currentStep} / 2`} />
+              <Row label={t('common.status')} value={statusBadge(leave.status)} />
+              <Row label={t('leave.currentStep')} value={`${leave.currentStep} / 2`} />
             </dl>
           </div>
 
           {/* Employee info */}
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Employee
+              {t('leave.requestEmployee')}
             </h3>
             {leave.employee ? (
               <dl className="space-y-3">
-                <Row label="Name" value={leave.employee.fullName} />
-                <Row label="Email" value={leave.employee.email} />
-                <Row label="Code" value={
+                <Row label={t('common.name')} value={leave.employee.fullName} />
+                <Row label={t('common.email')} value={leave.employee.email} />
+                <Row label={t('common.code')} value={
                   <span className="font-mono">{leave.employee.code}</span>
                 } />
                 <Row
-                  label="Department"
+                  label={t('common.department')}
                   value={leave.employee.department?.name}
                 />
                 <Row
-                  label="Manager"
+                  label={t('common.manager')}
                   value={leave.employee.manager?.fullName}
                 />
               </dl>
             ) : (
-              <p className="text-sm text-gray-400">Employee #${leave.employeeId}</p>
+              <p className="text-sm text-gray-400">Employee #{leave.employeeId}</p>
             )}
           </div>
         </div>
@@ -225,7 +227,7 @@ export default function LeaveDetailPage() {
         {leave.reason && (
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Reason
+              {t('common.reason')}
             </h3>
             <p className="text-sm text-gray-700 leading-relaxed">{leave.reason}</p>
           </div>

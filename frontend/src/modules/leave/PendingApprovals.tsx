@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslation } from 'react-i18next';
 import { statusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
@@ -19,6 +20,8 @@ export function PendingApprovals({
   onApprove,
   onReject,
 }: PendingApprovalsProps) {
+  const { t } = useTranslation();
+
   if (!loading && requests.length === 0) return null;
 
   return (
@@ -26,7 +29,7 @@ export function PendingApprovals({
       <div className="flex items-center gap-2 border-b border-amber-200 px-6 py-4">
         <span className="flex h-2 w-2 rounded-full bg-amber-500" />
         <h3 className="text-sm font-semibold text-amber-800">
-          Pending Your Approval
+          {t('leave.pendingApprovals')}
           {!loading && (
             <span className="ml-2 rounded-full bg-amber-200 px-2 py-0.5 text-xs font-medium text-amber-700">
               {requests.length}
@@ -69,9 +72,11 @@ export function PendingApprovals({
                   {req.fromDate !== req.toDate && <> → {formatDate(req.toDate)}</>}
                 </span>
                 <span className="font-medium text-gray-800">
-                  {req.days} day{req.days !== 1 ? 's' : ''}
+                  {req.days} {t('common.day')}
                 </span>
-                <span className="text-xs text-gray-400">Step {req.currentStep}/2</span>
+                <span className="text-xs text-gray-400">
+                  {t('common.step')} {req.currentStep}/2
+                </span>
               </div>
 
               {/* Actions */}
@@ -81,14 +86,14 @@ export function PendingApprovals({
                   onClick={() => onApprove(req.id)}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white border-0"
                 >
-                  Approve
+                  {t('leave.approve')}
                 </Button>
                 <Button
                   size="sm"
                   variant="danger"
                   onClick={() => onReject(req)}
                 >
-                  Reject
+                  {t('leave.reject')}
                 </Button>
               </div>
             </div>
