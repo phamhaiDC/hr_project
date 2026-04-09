@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import './globals.css';
 import { Providers } from './Providers';
 import { ServiceWorkerRegistration } from '@/components/pwa/ServiceWorkerRegistration';
@@ -36,21 +37,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="vi" className="h-full" suppressHydrationWarning>
       <head>
-        {/* Workaround for browser extensions (Brownie/Bloom) that cause hydration mismatches */}
-        <script
+        {/* Workaround for browser extensions (Brownie/Bloom) that cause hydration mismatches.
+            next/script with beforeInteractive is the correct way to inject inline scripts
+            in App Router — plain <script> tags inside RSC are not executed by Turbopack. */}
+        <Script
+          id="bis-skin-fix"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                const observer = new MutationObserver((mutations) => {
-                  for (const m of mutations) {
-                    if (m.type === 'attributes' && m.attributeName === 'bis_skin_checked') {
-                      m.target.removeAttribute('bis_skin_checked');
-                    }
-                  }
-                });
-                observer.observe(document.documentElement, { attributes: true, subtree: true, attributeFilter: ['bis_skin_checked'] });
-              })();
-            `,
+            __html: `(function(){var o=new MutationObserver(function(ms){for(var m of ms){if(m.type==='attributes'&&m.attributeName==='bis_skin_checked'){m.target.removeAttribute('bis_skin_checked');}}});o.observe(document.documentElement,{attributes:true,subtree:true,attributeFilter:['bis_skin_checked']});})();`,
           }}
         />
       </head>

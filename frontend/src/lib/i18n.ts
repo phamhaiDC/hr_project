@@ -1,13 +1,13 @@
+'use client';
+
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
 import en from '@/locales/en.json';
 import vi from '@/locales/vi.json';
 
-const isBrowser = typeof window !== 'undefined';
-
-// ❗ đọc language thủ công (KHÔNG dùng detector)
-const savedLang = isBrowser ? localStorage.getItem('i18nextLng') : null;
+// Read saved language — safe here because this module is client-only ('use client').
+const savedLang = typeof window !== 'undefined' ? localStorage.getItem('i18nextLng') : null;
 
 i18n
   .use(initReactI18next)
@@ -16,8 +16,8 @@ i18n
       en: { translation: en },
       vi: { translation: vi },
     },
-    lng: savedLang || 'en', // ✅ FIX: server & client đồng bộ
-    fallbackLng: 'en',
+    lng: savedLang || 'vi',
+    fallbackLng: 'vi',
     supportedLngs: ['en', 'vi'],
     interpolation: {
       escapeValue: false,
