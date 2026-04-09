@@ -59,6 +59,13 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=86400' },
         ],
       },
+      {
+        // PWA icons are stable — cache for 7 days in the browser.
+        source: '/icons/:file*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=604800, immutable' },
+        ],
+      },
     ];
   },
 
