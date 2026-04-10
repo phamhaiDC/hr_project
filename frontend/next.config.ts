@@ -1,4 +1,21 @@
 import type { NextConfig } from 'next';
+import * as os from 'os';
+
+/**
+ * Collect all non-loopback IPv4 addresses on this machine.
+ * Used to whitelist LAN access for Next.js dev HMR websocket.
+ */
+function getLanIPs(): string[] {
+  const ips: string[] = [];
+  for (const ifaces of Object.values(os.networkInterfaces())) {
+    for (const iface of ifaces ?? []) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        ips.push(iface.address);
+      }
+    }
+  }
+  return ips;
+}
 
 const nextConfig: NextConfig = {
   /**
@@ -8,8 +25,12 @@ const nextConfig: NextConfig = {
   webpack: (config) => config,
 
   /**
-   * Security headers — Nginx adds HSTS/TLS headers; Next.js adds app-level ones.
+   * Allow HMR websocket connections from LAN IPs.
+   * Without this, Next.js blocks /_next/webpack-hmr from non-localhost origins,
+   * causing the browser to hang for ~30s waiting for the connection to time out.
    */
+  allowedDevOrigins: getLanIPs(),
+
   async headers() {
     return [
       {
@@ -35,10 +56,6 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  /**
-   * Proxy /api/v1/* → NestJS backend.
-   * Set BACKEND_INTERNAL_URL in .env.production (e.g. http://127.0.0.1:3001).
-   */
   async rewrites() {
     const backendUrl = process.env.BACKEND_INTERNAL_URL ?? 'http://127.0.0.1:3001';
     return [

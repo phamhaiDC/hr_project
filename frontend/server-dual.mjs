@@ -15,9 +15,13 @@
  * so we set all env vars first, then load everything via dynamic import().
  */
 
-// ── 1. Force Webpack before anything loads ───────────────────────────────────
+// ── 1. Disable Turbopack before Next.js loads ────────────────────────────────
+// Turbopack's Rust runtime requires the `popcnt` CPU instruction — unavailable
+// on Windows Server 2012 → worker thread panics → ERR_EMPTY_RESPONSE.
+// ALL three env vars are needed; Next.js 16 checks different ones in different paths.
 process.env.NEXT_TELEMETRY_DISABLED  = '1';
 process.env.NEXT_FORCE_WEBPACK       = '1';
+process.env.TURBOPACK                = '0';
 process.env.__NEXT_TEST_WITH_DEVTOOL = '0';
 
 // ── 2. Dynamic imports (respect env vars set above) ──────────────────────────
@@ -32,16 +36,12 @@ const HTTP_PORT = parseInt(process.env.PORT ?? '80', 10);
 const app = next({
   dev,
   hostname: '0.0.0.0',
-  port: HTTP_PORT,  // tells Next.js which port it's running on (used in error overlays)
-  // customServer signals to Next.js that we are managing the HTTP layer.
-  // Without this flag Next.js 16 may start its own server and conflict.
+  port: HTTP_PORT,
   customServer: true,
-  // Pass an explicit conf to suppress Turbopack at the framework level.
-  // This is the most reliable knob available in Next.js 16 custom-server mode.
-  conf: {
-    // Keep webpack passthrough so existing next.config.ts `webpack:` key still runs.
-    webpack: (config) => config,
-  },
+  // turbopack: false is the official Next.js 16 API to disable Turbopack
+  // in custom server mode. Combined with env vars above, this is the most
+  // reliable way to force Webpack on older CPUs that lack `popcnt`.
+  turbopack: false,
 });
 
 const handle = app.getRequestHandler();
