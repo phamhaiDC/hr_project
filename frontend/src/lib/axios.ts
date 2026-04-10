@@ -1,9 +1,11 @@
 import axios from 'axios';
 import { getToken, removeToken } from '@/utils/token';
 
-// NEXT_PUBLIC_API_URL must include the global prefix, e.g. http://localhost:3001/api/v1
-// ⚠️  NEXT_PUBLIC_* vars are BAKED AT STARTUP — restart the dev server after any .env.local change.
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+// Always use a relative path so the browser sends requests to the same origin
+// (hr.dcorp.com.vn/api/v1 or localhost:3000/api/v1).
+// Next.js route handler at src/app/api/v1/[...path]/route.ts then proxies
+// server-side to http://localhost:3001 — this works from any client machine.
+const BASE_URL = '/api/v1';
 
 if (process.env.NODE_ENV === 'development') {
   console.debug('[axios] baseURL =', BASE_URL);
