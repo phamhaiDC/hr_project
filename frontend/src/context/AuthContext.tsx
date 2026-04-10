@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import {
   createContext,
@@ -18,7 +18,7 @@ import {
 import { authService } from '@/services/auth.service';
 import type { AuthUser, LoginResponse } from '@/types';
 
-// ─── Context shape ────────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Context shape в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -29,7 +29,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// ─── Provider ─────────────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Provider в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -47,8 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = getToken();
 
       if (!token) {
-        console.log('[auth] No stored token — showing login form');
-        if (active) setLoading(false);
+        console.log('[auth] No stored token вЂ” showing login form');
+        setLoading(false);
         return;
       }
 
@@ -63,21 +63,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // freezes the UI.  Crucially, aborting prevents the stale response from
       // ever reaching the axios interceptor.
       const timeoutId = setTimeout(() => {
-        console.warn('[auth] Token verification timed out — keeping optimistic session');
+        console.warn('[auth] Token verification timed out вЂ” keeping optimistic session');
         controller.abort();
       }, 5_000);
 
       try {
         console.log('[auth] Verifying token with /auth/profile...');
         const fresh = await authService.me(controller.signal);
-        console.log('[auth] Token valid — user:', fresh.email, '| role:', fresh.role);
+        console.log('[auth] Token valid вЂ” user:', fresh.email, '| role:', fresh.role);
         if (active) {
           setStoredUser(fresh);
           setUser(fresh);
         }
       } catch (err) {
         // ERR_CANCELED = request was aborted (timeout or unmount).
-        // This is NOT an auth failure — the token may still be valid on a slow
+        // This is NOT an auth failure вЂ” the token may still be valid on a slow
         // backend.  Keep the optimistic stored user so the user isn't
         // unnecessarily bounced to the login page.
         const isCancelled =
@@ -86,10 +86,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           (err as Error).name === 'AbortError';
 
         if (isCancelled) {
-          console.warn('[auth] Verification cancelled — keeping stored session');
+          console.warn('[auth] Verification cancelled вЂ” keeping stored session');
           // stored user is already set above; nothing more to do
         } else {
-          console.warn('[auth] Token verification failed — clearing session:', (err as Error).message);
+          console.warn('[auth] Token verification failed вЂ” clearing session:', (err as Error).message);
           removeToken();
           if (active) setUser(null);
         }
@@ -115,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string): Promise<LoginResponse> => {
       console.log('[auth] login() called for:', email);
       const data = await authService.login(email, password);
-      console.log('[auth] login() success — storing token and user');
+      console.log('[auth] login() success вЂ” storing token and user');
       setToken(data.accessToken);
       setStoredUser(data.employee);
       setUser(data.employee);
@@ -138,10 +138,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
+// в”Ђв”Ђв”Ђ Hook в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');
   return ctx;
 }
+
