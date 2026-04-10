@@ -428,6 +428,16 @@ export class AttendanceService {
       throw new BadRequestException(`You are outside "${officeName}". Please provide a reason to clock in.`);
     }
 
+    // 5b. Merge branch/geofence authorization into isInOffice.
+    // When the guard passes via a branch or geofence (not the assigned office),
+    // mark the record as IN_OFFICE so reports and the UI show the correct status.
+    if (!isInOffice && (isWithinBranch || isWithinGeofence)) {
+      isInOffice = true;
+      // If the assigned-office check returned OUTSIDE, upgrade it — the employee
+      // is still in an authorized location even if not in their specific office.
+      if (officeStatus === 'OUTSIDE') officeStatus = 'IN_OFFICE';
+    }
+
     let resolvedLocationId = nearestLoc?.id;
     let distanceM = nearestLoc?.distanceM;
 

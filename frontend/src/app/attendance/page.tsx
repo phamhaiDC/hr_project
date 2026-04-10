@@ -119,7 +119,32 @@ function GpsCheckIn({
   confirmedBranch,
 }: GpsCheckInProps) {
   const { t } = useTranslation();
-  // Compute live preview from client-side Haversine (before check-in)
+
+  // ── Nearest branch: always compute, regardless of whether employee has an assigned office.
+  // Priority: backend-confirmed result (after check-in) > client-side haversine preview.
+  type BranchResult = { name: string; distanceM: number; isInOffice: boolean; confirmed: boolean };
+  let nearestBranchResult: BranchResult | null = null;
+
+  if (confirmedBranch) {
+    nearestBranchResult = { ...confirmedBranch, confirmed: true };
+  } else if (lat != null && lng != null && branches.length > 0) {
+    let best: BranchResult | null = null;
+    for (const b of branches) {
+      if (b.latitude == null || b.longitude == null) continue;
+      const dist = Math.round(haversineMetres(lat, lng, b.latitude, b.longitude));
+      if (!best || dist < best.distanceM) {
+        best = {
+          name: b.name,
+          distanceM: dist,
+          isInOffice: dist <= (b.radius ?? 50),
+          confirmed: false,
+        };
+      }
+    }
+    nearestBranchResult = best;
+  }
+
+  // ── Assigned office card (client-side preview or backend-confirmed) ─────────
   let officeResult: OfficeResult | null = null;
 
   if (confirmedOffice && employeeOffice) {
@@ -139,33 +164,17 @@ function GpsCheckIn({
     };
   }
 
-  const isInOffice = officeResult?.status === 'IN_OFFICE';
+  // Employee is authorized if:
+  //  - within assigned office, OR
+  //  - within any branch geofence (even if outside assigned office)
+  const isInOffice = officeResult?.status === 'IN_OFFICE' || (nearestBranchResult?.isInOffice ?? false);
 
-  // Nearest branch — used when employee has no OfficeLocation assigned.
-  // Priority: backend-confirmed result (after check-in) > client-side preview.
-  type BranchResult = { name: string; distanceM: number; isInOffice: boolean; confirmed: boolean };
-  let nearestBranchResult: BranchResult | null = null;
-
-  if (!employeeOffice && !confirmedOffice) {
-    if (confirmedBranch) {
-      nearestBranchResult = { ...confirmedBranch, confirmed: true };
-    } else if (lat != null && lng != null && branches.length > 0) {
-      let best: BranchResult | null = null;
-      for (const b of branches) {
-        if (b.latitude == null || b.longitude == null) continue;
-        const dist = Math.round(haversineMetres(lat, lng, b.latitude, b.longitude));
-        if (!best || dist < best.distanceM) {
-          best = {
-            name: b.name,
-            distanceM: dist,
-            isInOffice: dist <= (b.radius ?? 50),
-            confirmed: false,
-          };
-        }
-      }
-      nearestBranchResult = best;
-    }
-  }
+  // Show the branch panel when:
+  //  - employee has no assigned office (original behaviour), OR
+  //  - employee is in a branch but OUTSIDE their assigned office (explains why check-in succeeded)
+  const showBranchPanel =
+    (!employeeOffice && !confirmedOffice) ||
+    (nearestBranchResult?.isInOffice === true && officeResult?.status === 'OUTSIDE');
 
   return (
     <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
@@ -287,8 +296,8 @@ function GpsCheckIn({
         </div>
       )}
 
-      {/* Nearest branch — shown when no per-employee OfficeLocation is set */}
-      {!loading && !error && lat != null && !employeeOffice && !confirmedOffice && (
+      {/* Nearest branch — shown when no assigned office, or when in a branch but outside assigned office */}
+      {!loading && !error && lat != null && showBranchPanel && (
         nearestBranchResult ? (
           <div className={`rounded-lg border px-3 py-3 transition-colors ${
             nearestBranchResult.isInOffice
@@ -548,6 +557,10 @@ export default function AttendancePage() {
         : `Checked in at ${formatDateTime(result.attendance.checkinTime)} — on time`;
       setActionMsg({ type: result.isLate ? 'error' : 'success', text: successMsg });
 
+      // Clear any stale "force reason" state — check-in succeeded so location is authorized.
+      setForceReason(false);
+      setNoteError('');
+
       const fresh = await attendanceService.today();
       setTodayStatus(fresh);
       loadMyRecords();
@@ -592,6 +605,8 @@ export default function AttendancePage() {
       if (result.isOvertime) successMsg += ` · OT ${Number(result.overtimeHours).toFixed(1)}h`;
       if (result.isEarlyOut) successMsg += ' · Early out';
       setActionMsg({ type: 'success', text: successMsg });
+      setForceReason(false);
+      setNoteError('');
 
       const fresh = await attendanceService.today();
       setTodayStatus(fresh);
