@@ -3,13 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --hostname 0.0.0.0",
-    "dev:dual": "node server-dual.mjs",
-    "dev:proxy": "node https-proxy.mjs",
-    "certs": "bash scripts/gen-cert.sh",
+    "dev": "node server-dual.mjs",
     "clean": "rm -rf .next",
     "build": "next build",
-    "start": "next start",
+    "start": "node server-prod.mjs",
     "lint": "eslint"
   },
   "dependencies": {

@@ -58,8 +58,17 @@ export class EmployeeService {
 
   /**
    * Validates working-mode / shift consistency relative to the employee's department.
-   * - SHIFT dept → workingMode must be SHIFT, shiftId required
-   * - FIXED dept → workingMode must be FIXED, shiftId ignored
+   *
+   * SHIFT department:
+   *   - workingMode must be "SHIFT"
+   *   - shiftId is OPTIONAL:
+   *       • Provided  → employee is pinned to that specific shift (e.g. always Morning)
+   *       • Omitted   → shift is auto-detected at check-in time by detectShift()
+   *         (correct for rotating departments like Command Center with 3 daily shifts)
+   *
+   * FIXED department:
+   *   - workingMode must not be "SHIFT"
+   *   - shiftId is ignored
    */
   private async validateShiftAssignment(
     departmentId: number | undefined,
@@ -77,19 +86,17 @@ export class EmployeeService {
           `Department "${dept.name}" uses SHIFT working type — employee workingMode must be "SHIFT".`,
         );
       }
-      if (!shiftId) {
-        throw new BadRequestException(
-          `Department "${dept.name}" uses SHIFT working type — a shiftId is required.`,
-        );
-      }
-      // Validate the shift belongs to this department
-      const shift = await this.prisma.shift.findFirst({
-        where: { id: shiftId, departmentId: dept.id },
-      });
-      if (!shift) {
-        throw new BadRequestException(
-          `Shift ${shiftId} does not belong to department "${dept.name}".`,
-        );
+      // shiftId is optional — when omitted, detectShift() picks the right shift at check-in.
+      // When provided, verify it belongs to this department.
+      if (shiftId) {
+        const shift = await this.prisma.shift.findFirst({
+          where: { id: shiftId, departmentId: dept.id },
+        });
+        if (!shift) {
+          throw new BadRequestException(
+            `Shift ${shiftId} does not belong to department "${dept.name}".`,
+          );
+        }
       }
     } else {
       // FIXED department

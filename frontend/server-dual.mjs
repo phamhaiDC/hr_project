@@ -1,9 +1,14 @@
 /**
  * server-dual.mjs
  *
- * Starts a single Next.js instance on:
- *  - HTTP:  3000
- *  - HTTPS: 3443
+ * Dev server — listens on port 80 (HTTP) by default.
+ * Nginx/Cloudflare is not used in dev; the app is accessed directly.
+ *
+ * Port 80 requires elevated privileges on Linux/Mac:
+ *   sudo node server-dual.mjs
+ * On Windows Server, no elevation is needed for port 80.
+ *
+ * Override port via env: PORT=8080 npm run dev
  *
  * CRITICAL — env vars must be set before `next` is imported.
  * ESM static imports are hoisted and execute before the module body,
@@ -11,10 +16,8 @@
  */
 
 // ── 1. Force Webpack before anything loads ───────────────────────────────────
-// Turbopack's Rust runtime requires the `popcnt` CPU instruction which is
-// absent on Windows Server 2012 hardware → thread panics → ERR_EMPTY_RESPONSE.
-process.env.NEXT_TELEMETRY_DISABLED = '1';
-process.env.NEXT_FORCE_WEBPACK      = '1';   // Next.js ≤15
+process.env.NEXT_TELEMETRY_DISABLED  = '1';
+process.env.NEXT_FORCE_WEBPACK       = '1';
 process.env.__NEXT_TEST_WITH_DEVTOOL = '0';
 
 // ── 2. Dynamic imports (respect env vars set above) ──────────────────────────
@@ -26,15 +29,15 @@ const { resolve }                         = await import('node:path');
 
 // ── 3. Config ─────────────────────────────────────────────────────────────────
 const dev        = process.env.NODE_ENV !== 'production';
-const HTTP_PORT  = 3000;
-const HTTPS_PORT = 3443;
+const HTTP_PORT  = parseInt(process.env.PORT ?? '80', 10);
+const HTTPS_PORT = parseInt(process.env.HTTPS_PORT ?? '443', 10);
 const DOMAIN     = 'hr.dcorp.com.vn';
 
 // ── 4. Next.js app ────────────────────────────────────────────────────────────
 const app = next({
   dev,
   hostname: '0.0.0.0',
-  port: HTTP_PORT,
+  port: HTTP_PORT,  // tells Next.js which port it's running on (used in error overlays)
   // customServer signals to Next.js that we are managing the HTTP layer.
   // Without this flag Next.js 16 may start its own server and conflict.
   customServer: true,
@@ -48,7 +51,7 @@ const app = next({
 
 const handle = app.getRequestHandler();
 
-// ── 5. TLS certs ──────────────────────────────────────────────────────────────
+// ── 5. TLS certs (optional — only used if cert files exist) ─────────────────
 const CERT_DIR  = resolve('certificates');
 const CERT_FILE = resolve(CERT_DIR, `${DOMAIN}.pem`);
 const KEY_FILE  = resolve(CERT_DIR, `${DOMAIN}-key.pem`);
@@ -59,10 +62,9 @@ if (existsSync(CERT_FILE) && existsSync(KEY_FILE)) {
     key:  readFileSync(KEY_FILE),
     cert: readFileSync(CERT_FILE),
   };
-} else {
-  console.warn(`\n  HTTPS not started — certs missing in ./certificates/`);
-  console.warn(`  Expected:\n    ${CERT_FILE}\n    ${KEY_FILE}\n`);
 }
+// No warning when certs are missing — HTTPS is optional in dev.
+// In production, TLS is handled by Nginx + Cloudflare.
 
 // ── 6. Request handler ────────────────────────────────────────────────────────
 function handleRequest(req, res) {
@@ -92,19 +94,30 @@ console.log('  Next.js ready.\n');
 
 // ── 8. HTTP server ────────────────────────────────────────────────────────────
 const httpServer = createHttpServer(handleRequest);
-httpServer.on('error', (err) => console.error('[HTTP server error]', err));
+httpServer.on('error', (err) => {
+  if (err.code === 'EACCES') {
+    console.error(`\n  [error] Port ${HTTP_PORT} requires elevated privileges.`);
+    console.error(`  Mac/Linux: sudo npm run dev`);
+    console.error(`  Or use a higher port: PORT=8080 npm run dev\n`);
+  } else {
+    console.error('[HTTP server error]', err);
+  }
+  process.exit(1);
+});
 httpServer.listen(HTTP_PORT, '0.0.0.0', () => {
-  console.log(`  HTTP:  http://localhost:${HTTP_PORT}`);
-  console.log(`         http://${DOMAIN}:${HTTP_PORT}`);
+  const portSuffix = HTTP_PORT === 80 ? '' : `:${HTTP_PORT}`;
+  console.log(`  HTTP:  http://localhost${portSuffix}`);
+  console.log(`         http://${DOMAIN}${portSuffix}`);
 });
 
-// ── 9. HTTPS server ───────────────────────────────────────────────────────────
+// ── 9. HTTPS server (optional) ────────────────────────────────────────────────
 if (httpsOptions) {
   const httpsServer = createHttpsServer(httpsOptions, handleRequest);
-  httpsServer.on('error',   (err) => console.error('[HTTPS server error]', err));
+  httpsServer.on('error',          (err) => console.error('[HTTPS server error]', err));
   httpsServer.on('tlsClientError', (err) => console.warn('[TLS client error]', err.message));
   httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
-    console.log(`  HTTPS: https://localhost:${HTTPS_PORT}`);
-    console.log(`         https://${DOMAIN}:${HTTPS_PORT}\n`);
+    const portSuffix = HTTPS_PORT === 443 ? '' : `:${HTTPS_PORT}`;
+    console.log(`  HTTPS: https://localhost${portSuffix}`);
+    console.log(`         https://${DOMAIN}${portSuffix}`);
   });
 }
