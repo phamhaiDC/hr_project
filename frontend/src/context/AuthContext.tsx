@@ -47,8 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = getToken();
 
       if (!token) {
-        console.log('[auth] No stored token вЂ” showing login form');
-        setLoading(false);
+        console.log('[auth] No stored token — showing login form');
+        if (active) setLoading(false);
         return;
       }
 
@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const timeoutId = setTimeout(() => {
         console.warn('[auth] Token verification timed out вЂ” keeping optimistic session');
         controller.abort();
-      }, 5_000);
+      }, 3_000);
 
       try {
         console.log('[auth] Verifying token with /auth/profile...');
