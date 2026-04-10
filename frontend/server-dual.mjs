@@ -30,7 +30,7 @@ const { createServer: createHttpServer } = await import('node:http');
 
 // ── 3. Config ─────────────────────────────────────────────────────────────────
 const dev       = process.env.NODE_ENV !== 'production';
-const HTTP_PORT = parseInt(process.env.PORT ?? '80', 10);
+const HTTP_PORT = parseInt(process.env.PORT ?? '3000', 10);
 
 // ── 4. Next.js app ────────────────────────────────────────────────────────────
 const app = next({
