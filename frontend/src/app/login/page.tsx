@@ -39,7 +39,12 @@ export default function LoginPage() {
       const from = searchParams.get('from') ?? '/dashboard';
       router.replace(from);
     } catch (err: unknown) {
+      // Debug: log full error so browser devtools shows exactly what happened
+      console.error('[login] handleSubmit error:', JSON.stringify(err, null, 2), err);
+
       const axiosErr = err as {
+        code?: string;
+        message?: string;
         response?: { status?: number; data?: { message?: string | string[] } };
       };
 
@@ -53,9 +58,13 @@ export default function LoginPage() {
       } else if (status === 403) {
         errorMsg = 'Your account has been deactivated. Please contact HR.';
       } else if (status !== undefined && status >= 500) {
-        errorMsg = 'Server error. Please try again later.';
+        errorMsg = `Server error (${status}). Please try again later.`;
+      } else if (axiosErr?.code === 'ERR_NETWORK' || axiosErr?.code === 'ECONNABORTED') {
+        errorMsg = 'Network error — cannot reach server. Check your connection.';
       } else if (rawMsg) {
         errorMsg = Array.isArray(rawMsg) ? rawMsg[0] : rawMsg;
+      } else if (axiosErr?.message) {
+        errorMsg = `Error: ${axiosErr.message}`;
       } else {
         errorMsg = t('auth.loginFailed');
       }

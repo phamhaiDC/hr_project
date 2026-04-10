@@ -42,6 +42,6 @@ export const config = {
   // browser can fetch them before the user is authenticated — a redirect on sw.js
   // causes "script resource is behind a redirect" and kills SW registration.
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|sw\\.js|manifest\\.json|offline\\.html|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api/).*)',
+    '/((?!_next/static|_next/image|_next/webpack-hmr|favicon\\.ico|sw\\.js|manifest\\.json|offline\\.html|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api/).*)',
   ],
 };
