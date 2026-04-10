@@ -29,7 +29,10 @@ const nextConfig: NextConfig = {
    * Without this, Next.js blocks /_next/webpack-hmr from non-localhost origins,
    * causing the browser to hang for ~30s waiting for the connection to time out.
    */
-  allowedDevOrigins: getLanIPs(),
+  allowedDevOrigins: [
+    ...getLanIPs(),
+    'hr.dcorp.com.vn',
+  ],
 
   async headers() {
     return [
