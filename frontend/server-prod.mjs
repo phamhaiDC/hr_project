@@ -45,7 +45,5 @@ const server = createHttpServer(handleRequest);
 server.on('error', (err) => console.error('[prod] server error:', err));
 
 server.listen(PORT, HOSTNAME, () => {
-  console.log(`\n  Production server ready`);
-  console.log(`  Internal: http://${HOSTNAME}:${PORT}`);
-  console.log(`  Public:   https://hr.dcorp.com.vn  (via Nginx + Cloudflare)\n`);
+  console.log(`\n  Production server ready: http://${HOSTNAME}:${PORT}\n`);
 });

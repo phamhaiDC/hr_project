@@ -21,17 +21,12 @@ process.env.NEXT_FORCE_WEBPACK       = '1';
 process.env.__NEXT_TEST_WITH_DEVTOOL = '0';
 
 // ── 2. Dynamic imports (respect env vars set above) ──────────────────────────
-const { default: next }                   = await import('next');
-const { createServer: createHttpServer }  = await import('node:http');
-const { createServer: createHttpsServer } = await import('node:https');
-const { readFileSync, existsSync }        = await import('node:fs');
-const { resolve }                         = await import('node:path');
+const { default: next }                  = await import('next');
+const { createServer: createHttpServer } = await import('node:http');
 
 // ── 3. Config ─────────────────────────────────────────────────────────────────
-const dev        = process.env.NODE_ENV !== 'production';
-const HTTP_PORT  = parseInt(process.env.PORT ?? '80', 10);
-const HTTPS_PORT = parseInt(process.env.HTTPS_PORT ?? '443', 10);
-const DOMAIN     = 'hr.dcorp.com.vn';
+const dev       = process.env.NODE_ENV !== 'production';
+const HTTP_PORT = parseInt(process.env.PORT ?? '80', 10);
 
 // ── 4. Next.js app ────────────────────────────────────────────────────────────
 const app = next({
@@ -51,20 +46,9 @@ const app = next({
 
 const handle = app.getRequestHandler();
 
-// ── 5. TLS certs (optional — only used if cert files exist) ─────────────────
-const CERT_DIR  = resolve('certificates');
-const CERT_FILE = resolve(CERT_DIR, `${DOMAIN}.pem`);
-const KEY_FILE  = resolve(CERT_DIR, `${DOMAIN}-key.pem`);
-
-let httpsOptions = null;
-if (existsSync(CERT_FILE) && existsSync(KEY_FILE)) {
-  httpsOptions = {
-    key:  readFileSync(KEY_FILE),
-    cert: readFileSync(CERT_FILE),
-  };
-}
-// No warning when certs are missing — HTTPS is optional in dev.
-// In production, TLS is handled by Nginx + Cloudflare.
+// ── 5. TLS ───────────────────────────────────────────────────────────────────
+// HTTPS is handled entirely by Nginx + Cloudflare.
+// Node.js runs plain HTTP only — no certs needed here.
 
 // ── 6. Request handler ────────────────────────────────────────────────────────
 function handleRequest(req, res) {
@@ -106,18 +90,7 @@ httpServer.on('error', (err) => {
 });
 httpServer.listen(HTTP_PORT, '0.0.0.0', () => {
   const portSuffix = HTTP_PORT === 80 ? '' : `:${HTTP_PORT}`;
-  console.log(`  HTTP:  http://localhost${portSuffix}`);
-  console.log(`         http://${DOMAIN}${portSuffix}`);
+  console.log(`  Ready: http://localhost${portSuffix}`);
 });
 
-// ── 9. HTTPS server (optional) ────────────────────────────────────────────────
-if (httpsOptions) {
-  const httpsServer = createHttpsServer(httpsOptions, handleRequest);
-  httpsServer.on('error',          (err) => console.error('[HTTPS server error]', err));
-  httpsServer.on('tlsClientError', (err) => console.warn('[TLS client error]', err.message));
-  httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
-    const portSuffix = HTTPS_PORT === 443 ? '' : `:${HTTPS_PORT}`;
-    console.log(`  HTTPS: https://localhost${portSuffix}`);
-    console.log(`         https://${DOMAIN}${portSuffix}`);
-  });
-}
+// HTTPS is terminated by Nginx + Cloudflare — no HTTPS server here.
