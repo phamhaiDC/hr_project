@@ -18,12 +18,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [mounted, setMounted] = useState(false); // ✅ FIX HYDRATION
-  
-  // ✅ ensure render only on client
-  useEffect(() => {
-    setMounted(true);
-  }, [])
+
   // Redirect already-authenticated users (e.g. back-navigated to /login).
   // Guarded against `submitting` so this never races with handleSubmit's
   // direct router.replace() call in React 19 concurrent mode.
@@ -144,15 +139,13 @@ export default function LoginPage() {
             <button
               type="submit"
               className="flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
-              disabled={loading || submitting}
+              disabled={submitting}
             >
               {submitting ? (
                 <div className="flex items-center gap-2">
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                   {t('auth.signingIn')}
                 </div>
-              ) : loading ? (
-                t('common.loading')
               ) : (
                 t('auth.signIn')
               )}
