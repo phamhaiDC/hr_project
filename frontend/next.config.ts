@@ -16,10 +16,6 @@ function getLanIPs(): string[] {
 const nextConfig: NextConfig = {
   webpack: (config) => config,
 
-  // allowedDevOrigins: Next.js compares these against the WebSocket 'Origin' header.
-  // When accessed via Cloudflare HTTPS, the browser sends Origin: https://hr.dcorp.com.vn
-  // so we must include the full origin string (with protocol).
-  // LAN IPs are listed without protocol (Next.js also strips protocol in its check).
   allowedDevOrigins: [
     ...getLanIPs(),
     'hr.dcorp.com.vn',

@@ -44,7 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           id="bis-skin-fix"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: `(function(){var o=new MutationObserver(function(ms){for(var m of ms){if(m.type==='attributes'&&m.attributeName==='bis_skin_checked'){m.target.removeAttribute('bis_skin_checked');}}});o.observe(document.documentElement,{attributes:true,subtree:true,attributeFilter:['bis_skin_checked']});})();`,
+            __html: `(function(){function clean(){document.querySelectorAll('[bis_skin_checked]').forEach(function(el){el.removeAttribute('bis_skin_checked');});}clean();new MutationObserver(function(ms){for(var m of ms){if(m.attributeName==='bis_skin_checked'){m.target.removeAttribute('bis_skin_checked');}}}).observe(document.documentElement,{attributes:true,subtree:true,attributeFilter:['bis_skin_checked']});document.addEventListener('DOMContentLoaded',clean);})();`,
           }}
         />
       </head>
