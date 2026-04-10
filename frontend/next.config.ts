@@ -1,4 +1,3 @@
-Set-Content -Path "Z:\AI_DEV_PROJECT_PRODUCT\hr_project\frontend\next.config.ts" -Encoding UTF8 -Value @'
 import type { NextConfig } from 'next';
 import * as os from 'os';
 
@@ -17,9 +16,15 @@ function getLanIPs(): string[] {
 const nextConfig: NextConfig = {
   webpack: (config) => config,
 
+  // allowedDevOrigins: Next.js compares these against the WebSocket 'Origin' header.
+  // When accessed via Cloudflare HTTPS, the browser sends Origin: https://hr.dcorp.com.vn
+  // so we must include the full origin string (with protocol).
+  // LAN IPs are listed without protocol (Next.js also strips protocol in its check).
   allowedDevOrigins: [
     ...getLanIPs(),
     'hr.dcorp.com.vn',
+    'https://hr.dcorp.com.vn',
+    'http://hr.dcorp.com.vn',
   ],
 
   async headers() {
@@ -59,4 +64,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-'@
