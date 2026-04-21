@@ -12,7 +12,7 @@ import { PageSpinner } from '@/components/ui/Spinner';
 import { statusBadge } from '@/components/ui/Badge';
 import { leaveService } from '@/services/leave.service';
 import { usePagination } from '@/hooks/usePagination';
-import { formatDate } from '@/utils/format';
+import { formatDate, formatMonthYear } from '@/utils/format';
 import { useAuth } from '@/hooks/useAuth';
 import { CreateLeaveModal } from '@/modules/leave/CreateLeaveModal';
 import { RejectModal } from '@/modules/leave/RejectModal';
@@ -143,7 +143,7 @@ function AdminBalancePanel() {
     setAccruing(true);
     setAccrueMsg('');
     try {
-      const res = await leaveService.accrue({ daysPerEmployee: 1.0, note: `Manual accrual — ${new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}` });
+      const res = await leaveService.accrue({ daysPerEmployee: 1.0, note: `Cộng phép thủ công — ${formatMonthYear()}` });
       setAccrueMsg(t('leave.accrualSuccess', { n: res.processed }));
       await load();
     } catch (err) {
@@ -383,16 +383,6 @@ export default function LeavePage() {
 
         {pageError && <Alert variant="error" message={pageError} />}
 
-        {/* Pending approvals */}
-        {isApprover && (
-          <PendingApprovals
-            requests={pending}
-            loading={pendingLoading}
-            onApprove={handleApprove}
-            onReject={(req) => setRejectTarget(req)}
-          />
-        )}
-
         {/* Balance + accrual (employee's own) */}
         <div className="grid gap-4 lg:grid-cols-2">
           {balance ? (
@@ -404,9 +394,6 @@ export default function LeavePage() {
           ) : null}
           {accrualLog.length > 0 && <AccrualLog logs={accrualLog} />}
         </div>
-
-        {/* Admin: all balances */}
-        {isAdminOrHR && <AdminBalancePanel />}
 
         {/* Leave requests table */}
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -505,10 +492,11 @@ export default function LeavePage() {
                 </table>
               </div>
 
-              {result && result.meta.totalPages > 1 && (
+              {/* Always show pagination */}
+              {result && (
                 <Pagination
                   page={page}
-                  totalPages={result.meta.totalPages}
+                  totalPages={result.meta.totalPages || 1}
                   total={result.meta.total}
                   limit={limit}
                   onPrev={prev}
@@ -519,6 +507,20 @@ export default function LeavePage() {
             </>
           )}
         </div>
+
+        {/* Pending approvals */}
+        {isApprover && (
+          <PendingApprovals
+            requests={pending}
+            loading={pendingLoading}
+            onApprove={handleApprove}
+            onReject={(req) => setRejectTarget(req)}
+          />
+        )}
+
+        {/* Admin: all balances */}
+        {isAdminOrHR && <AdminBalancePanel />}
+
       </div>
 
       <CreateLeaveModal

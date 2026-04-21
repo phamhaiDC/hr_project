@@ -859,7 +859,60 @@ export default function AttendancePage() {
             <PageSpinner />
           ) : (
             <>
-              <div className="overflow-x-auto">
+              {/* ── Mobile card list ── */}
+              <div className="sm:hidden divide-y divide-gray-50">
+                {myRecords?.data.length === 0 && (
+                  <p className="px-5 py-10 text-center text-sm text-gray-400">{t('attendance.noRecordsYet')}</p>
+                )}
+                {myRecords?.data.map((rec) => (
+                  <div key={rec.id} className="px-4 py-3 space-y-2">
+                    {/* Row 1: date + hours */}
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-gray-800 text-sm">{formatDate(rec.date)}</span>
+                      <span className="font-bold text-indigo-600 text-sm">{formatHours(rec.workingHours)}</span>
+                    </div>
+                    {/* Row 2: shift */}
+                    {rec.shift && (
+                      <p className="text-xs text-gray-500">
+                        {rec.shift.name}
+                        <span className="ml-1 text-gray-400">{rec.shift.startTime}–{rec.shift.endTime}</span>
+                      </p>
+                    )}
+                    {/* Row 3: checkin / checkout */}
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="rounded-lg bg-emerald-50 px-3 py-2">
+                        <p className="text-[10px] font-semibold uppercase text-emerald-500 mb-0.5">{t('attendance.checkinLabel')}</p>
+                        <p className="font-medium text-gray-700">{rec.checkinTime ? formatDateTime(rec.checkinTime).split(' ')[1] : '--:--'}</p>
+                      </div>
+                      <div className="rounded-lg bg-orange-50 px-3 py-2">
+                        <p className="text-[10px] font-semibold uppercase text-orange-500 mb-0.5">{t('attendance.checkoutLabel')}</p>
+                        <p className="font-medium text-gray-700">{rec.checkoutTime ? formatDateTime(rec.checkoutTime).split(' ')[1] : '--:--'}</p>
+                      </div>
+                    </div>
+                    {/* Row 4: status badges */}
+                    <div className="flex flex-wrap gap-1">
+                      <WfmBadges record={rec} />
+                      {rec.isInOffice !== undefined && (
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          rec.isInOffice ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
+                        }`}>
+                          {rec.isInOffice ? t('attendance.inOfficeLabel') : t('attendance.outsideLabel')}
+                        </span>
+                      )}
+                    </div>
+                    {/* Row 5: notes */}
+                    {(rec.checkinNote || rec.checkoutNote) && (
+                      <div className="space-y-1 text-[11px] text-gray-500">
+                        {rec.checkinNote && <p className="bg-gray-50 rounded px-2 py-1"><span className="font-semibold text-gray-400">IN:</span> {rec.checkinNote}</p>}
+                        {rec.checkoutNote && <p className="bg-gray-50 rounded px-2 py-1"><span className="font-semibold text-gray-400">OUT:</span> {rec.checkoutNote}</p>}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* ── Desktop table ── */}
+              <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="border-b border-gray-100 bg-gray-50 text-xs font-medium uppercase tracking-wide text-gray-500">
                     <tr>
